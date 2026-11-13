@@ -97,42 +97,19 @@ it unverified.
 
 ## Verification and tests
 
-Both flavours were compared value by value with the official NPB 3.4.4 for classes S, W, A and B (serial with
-the OpenMP version without OpenMP, MPJ with the MPI version), including the intermediate values (norms,
-checksums, per-iteration values) and not only the final verification. Reference values are stored in
-`src/test/resources/golden` (serial) and `golden/mpi` (MPJ, one value per number of processes).
-
-```
-mvn test                                  # serial versions and common (JUnit 5)
-FMPJ_HOME=/path/to/fastmpj mvn test       # also the MPJ tests, which launch the kernels with fmpjrun
-mvn test -DexcludedGroups=classC -Dgroups=classB      # class B golden tests (excluded by default)
-mvn test -DexcludedGroups= -Dgroups=classC -Dtest.xmx=24g   # class C (excluded by default)
-```
-
-The golden files are regenerated with `scripts/gen_golden.py` (serial), `scripts/gen_golden_mpi.py` (MPJ) and
-`scripts/gen_random_golden.py` (random number generator). They need the official NPB 3.4.4 distribution,
-unpacked as `NPB3.4.4` at the repository root (it is not included in this repository), and `gfortran`
-(and an MPI installation for the MPJ ones).
-
-Floating-point results are bit-exact with the reference wherever the arithmetic is the same: Java does not fuse
-multiply-adds and the association of every Fortran expression was preserved. The only remaining differences
-are in FT (at most 4.5e-16), caused by `Math.exp` versus glibc's `exp`, and by the order of the reduction.
+Both flavours were compared value by value with the official NPB 3.4.4 for classes S, W, A and B, including
+intermediate values and not only the final verification. The tests are run with `mvn test` (serial versions
+and `NPB.common`) or `FMPJ_HOME=/path/to/fastmpj mvn test` (also the MPJ versions, which need FastMPJ).
+See [docs/TESTING.md](docs/TESTING.md) for the details, the test groups and how the golden files are
+regenerated.
 
 ## Performance evaluation
 
-The goal of the evaluation is the efficiency of the Java code, not of the communications. Every result is
-therefore measured with **one process**, so the same computation runs in Java and in Fortran/C without the
-influence of a particular MPJ or MPI implementation, and with the time given by the benchmark itself.
-
-* **Machine**: Intel Core i7-12700, 31 GB, Linux 6.12 (Debian 13). Each run is restricted with `taskset` to four
-  performance cores (one hardware thread each).
-* **Java**: OpenJDK 25.0.5 (classes compiled with `--release 8`), default JVM options (G1) and `-Xmx8g` (class
-  B) or `-Xmx20g` (class C). MPJ versions run on FastMPJ with the `smdev` device.
-* **Reference**: the official NPB 3.4.4 built with GCC/gfortran 14.2.0, `-O3 -mcmodel=medium`; the serial
-  reference is the OpenMP version built without `-fopenmp`, the MPJ reference is the MPI version with Open MPI
-  5.0.7 (one process).
-* **Statistics**: median of 5 repetitions (the coefficient of variation is at most 5.9 %); every run verified successfully.
-  The ratio is Java time over reference time, so values below 1 mean that Java is faster.
+The goal of the evaluation is the efficiency of the Java code, not of the communications, so every result is
+measured with one process and compared with the official NPB 3.4.4 (OpenMP without OpenMP for the serial
+versions, MPI for the MPJ versions) built with GCC/gfortran 14.2.0 `-O3`. Values below are medians of 5
+repetitions, in seconds; the ratio is Java time over reference time. Machine, JVM flags, methodology, class C
+and class D results are in [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ### Class B (time in seconds)
 
@@ -146,33 +123,6 @@ influence of a particular MPJ or MPI implementation, and with the time given by 
 | LU | 72.50 | 52.29 | 1.39 | 79.70 | 55.28 | 1.44 |
 | MG | 2.77 | 1.82 | 1.52 | 2.99 | 2.05 | 1.46 |
 | SP | 52.01 | 51.92 | 1.00 | 78.73 | 63.37 | 1.24 |
-
-### Class C (time in seconds)
-
-| Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
-|---|--:|--:|--:|--:|--:|--:|
-| BT | 427.03 | 372.39 | 1.15 | 483.63 | 344.09 | 1.41 |
-| CG | 55.90 | 63.38 | 0.88 | 56.65 | 64.22 | 0.88 |
-| EP | 35.68 | 34.88 | 1.02 | 36.11 | 34.82 | 1.04 |
-| FT | 59.27 | 59.43 | 1.00 | 58.87 | 73.42 | 0.80 |
-| IS | 2.47 | 2.58 | 0.96 | 2.91 | 2.81 | 1.04 |
-| LU | 299.75 | 216.57 | 1.38 | 386.65 | 227.44 | 1.70 |
-| MG | 21.77 | 15.19 | 1.43 | 23.01 | 16.43 | 1.40 |
-| SP | 225.61 | 232.37 | 0.97 | 382.74 | 267.32 | 1.43 |
-
-Serial and MPJ FT share the same FFT core.
-
-### Class D
-
-Class D is evaluated for the kernels that fit on the test machine (BT, SP, LU, CG and EP); results pending.
-
-| Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
-|---|--:|--:|--:|--:|--:|--:|
-| BT | TBD | TBD | TBD | TBD | TBD | TBD |
-| SP | TBD | TBD | TBD | TBD | TBD | TBD |
-| LU | TBD | TBD | TBD | TBD | TBD | TBD |
-| CG | TBD | TBD | TBD | TBD | TBD | TBD |
-| EP | TBD | TBD | TBD | TBD | TBD | TBD |
 
 ## Differences from the official NPB
 
