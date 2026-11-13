@@ -46,6 +46,10 @@ import org.junit.jupiter.params.provider.MethodSource;
  * SUCCESSFUL" is not enough (an exception does not count as a failed verification).
  */
 class MpjVerificationSanityTest {
+	/** "--release=8" where javac supports it (JDK 9 or later); JDK 8 compiles for 8 anyway. */
+	private static String release() {
+		return System.getProperty("java.specification.version").startsWith("1.") ? "-Xlint:none" : "--release=8";
+	}
 
 	private static final boolean FAIL = false, PASS = true;
 	private static final Pattern VERIFICATION = Pattern.compile("Verification\\s*=\\s*(\\w+)");
@@ -270,7 +274,7 @@ class MpjVerificationSanityTest {
 		JavaCompiler jc = ToolProvider.getSystemJavaCompiler();
 		assertNotNull(jc, "a JDK (javax.tools) is required for this test");
 		ByteArrayOutputStream err = new ByteArrayOutputStream();
-		int rc = jc.run(null, null, err, "-nowarn", "-proc:none", "--release", "8", "-encoding", "ISO-8859-1",
+		int rc = jc.run(null, null, err, "-nowarn", "-proc:none", release(), "-encoding", "ISO-8859-1",
 				"-classpath", bin.getAbsolutePath() + File.pathSeparator + mpjJar.getAbsolutePath(), "-d",
 				out.toString(), mutated.toString());
 		assertEquals(0, rc, "the mutation does not compile:\n" + err.toString("UTF-8"));

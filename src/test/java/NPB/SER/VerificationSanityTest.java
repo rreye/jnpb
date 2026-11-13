@@ -239,12 +239,17 @@ class VerificationSanityTest {
 						? " -> THE VERIFICATION DOES NOT DETECT THIS ERROR" : ""));
 	}
 
+	/** "--release 8" where javac supports it (JDK 9 or later); JDK 8 compiles for 8 anyway. */
+	static String release() {
+		return System.getProperty("java.specification.version").startsWith("1.") ? "-Xlint:none" : "--release=8";
+	}
+
 	static void compile(Path file, Path outDir) throws IOException {
 		JavaCompiler jc = ToolProvider.getSystemJavaCompiler();
 		assertNotNull(jc, "a JDK (javax.tools) is required for this test");
 		String cp = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
 		ByteArrayOutputStream err = new ByteArrayOutputStream();
-		int rc = jc.run(null, null, err, "-nowarn", "-proc:none", "--release", "8", "-encoding", "ISO-8859-1",
+		int rc = jc.run(null, null, err, "-nowarn", "-proc:none", release(), "-encoding", "ISO-8859-1",
 				"-classpath", cp, "-d", outDir.toString(), file.toString());
 		assertEquals(0, rc, "the mutation does not compile:\n" + err.toString("UTF-8"));
 	}
