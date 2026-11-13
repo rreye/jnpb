@@ -11,7 +11,7 @@ reproduces the verification of the official NPB 3.4.4 (Fortran/C) and is checked
 * **`NPB.SER`**: serial versions of CG, EP, FT, IS, MG, SP, BT and LU. They follow the NPB 3.4.4 OpenMP
   version built without OpenMP, the serial reference of the NPB 3.4 series. They need nothing but a JDK.
 * **`NPB.MPJ`**: message-passing versions of CG, EP, FT, IS, MG, SP, BT, LU and DT, for any
-  MPJ library (tested with FastMPJ). They follow the NPB 3.4.4 MPI
+  MPJ library that implements the mpiJava 1.2 API (see Requirements). They follow the NPB 3.4.4 MPI
   version. BT is the base version, without the BTIO variants. DT exists only in MPI, so it has no serial
   counterpart.
 * **`NPB.common`**: the random number generator (bit-exact with NPB's), timers, argument parsing and result
@@ -22,8 +22,13 @@ DC and UA (only available in the OpenMP version) are not included.
 ## Requirements
 
 * Java 8 or later (the code is compiled with `--release 8`) and Maven 3.
-* For `NPB.MPJ` only: an MPJ library. FastMPJ is not published in Maven Central, so its `mpj.jar` is read
-  from `$FMPJ_HOME/lib/mpj.jar`.
+* For `NPB.MPJ` only: a Java message-passing library that implements the **mpiJava 1.2 API** (package `mpi`),
+  such as FastMPJ, [MPJ Express](https://mpjexpress.sourceforge.net/)
+  or the original mpiJava. Other Java MPI bindings with a different API (Open MPI's Java bindings,
+  MPJ/Ibis) are not compatible. The MPJ versions have only been tested with FastMPJ, so the build and run
+  examples below use it. FastMPJ is not published in Maven Central, so the `mpj` profile reads its `mpj.jar`
+  from `$FMPJ_HOME/lib/mpj.jar`; with another library, point `fmpj.home` to a directory whose `lib/mpj.jar` is
+  the library jar, or compile the sources of `NPB.MPJ` with that jar in the class path.
 
 ## Build
 
@@ -37,7 +42,8 @@ mvn clean
 ```
 
 Classes are written to `bin/` instead of `target/classes`. The jar built with the `mpj` profile contains both
-flavours; running the MPJ classes needs the MPJ library at run time.
+flavours; running the MPJ classes needs the MPJ library at run time (the launch command depends on the
+library: `fmpjrun` for FastMPJ, `mpjrun.sh` for MPJ Express).
 
 ## Run
 
@@ -53,7 +59,7 @@ Every benchmark has its own `main`. Arguments are `KEY=value` pairs, case-insens
 # serial
 java -cp bin NPB.SER.CG CLASS=S
 
-# MPJ, with FastMPJ (hostfile "machines" lists the hosts)
+# MPJ, with FastMPJ, the library used for testing (hostfile "machines" lists the hosts)
 fmpjrun -np 4 -hostfile machines -class NPB.MPJ.CG CLASS=A
 fmpjrun -np 43 -dev niodev -hostfile machines -class NPB.MPJ.DT BH CLASS=B
 ```
