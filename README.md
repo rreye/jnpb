@@ -23,7 +23,7 @@ DC and UA (only available in the OpenMP version) are not included.
 
 * Java 8 or later (the code is compiled with `--release 8`) and Maven 3.
 * For `NPB.MPJ` only: a Java message-passing library that implements the **mpiJava 1.2 API** (package `mpi`),
-  such as FastMPJ, [MPJ Express](https://mpjexpress.sourceforge.net/)
+  such as [FastMPJ](https://gac.udc.es/~rober/fastmpj), [MPJ Express](https://mpjexpress.sourceforge.net/)
   or the original mpiJava. Other Java MPI bindings with a different API (Open MPI's Java bindings,
   MPJ/Ibis) are not compatible. The MPJ versions have only been tested with FastMPJ, so the build and run
   examples below use it. FastMPJ is not published in Maven Central, so the `mpj` profile reads its `mpj.jar`
