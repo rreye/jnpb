@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>es.udc.gac</groupId>
+	<artifactId>jnpb</artifactId>
+	<version>1.0.0</version>
+	<packaging>jar</packaging>
+	<name>JNPB</name>
+	<description>NAS Parallel Benchmarks for Java (serial and MPJ). Unofficial port.</description>
+
+	<organization>
+		<name>Universidade da Coruña</name>
+	</organization>
+
+	<!-- License to be confirmed (the sources carry SPDX-License-Identifier: MIT as a placeholder). -->
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>https://opensource.org/licenses/MIT</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>rreye</id>
+			<name>Roberto R. Expósito</name>
+			<email>roberto.rey.exposito@udc.es</email>
+			<organization>Universidade da Coruña</organization>
+		</developer>
+	</developers>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.release>8</maven.compiler.release>
+		<!-- Tests: class C is tagged "classC" and excluded by default.
+		     Run it with: mvn test -DexcludedGroups= -Dgroups=classC -Dtest.xmx=24g
+		     MPJ golden tests of class B (MpjGoldenClassBTest) are tagged "classB" and also excluded by default:
+		     FMPJ_HOME=... mvn test -Pmpj -DexcludedGroups=classC -Dgroups=classB -->
+		<excludedGroups>classC,classB</excludedGroups>
+		<test.xmx>10g</test.xmx>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.14.4</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<!-- Standard layout (src/main/java, src/test/java). Only the main classes go to bin/, as in the old build.xml. -->
+		<outputDirectory>${project.basedir}/bin</outputDirectory>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.13.0</version>
+				<configuration>
+					<debug>true</debug>
+					<debuglevel>lines,vars,source</debuglevel>
+					<!-- The MPJ versions need FastMPJ (mpi.*): they are only compiled with the "mpj" profile.
+					     The serial versions and NPB.common need nothing else. -->
+					<excludes>
+						<exclude>NPB/MPJ/**</exclude>
+					</excludes>
+					<!-- ActiveProcsTest uses mpi.* through ActiveProcs: only with the "mpj" profile. -->
+					<testExcludes>
+						<testExclude>NPB/MPJ/ActiveProcsTest.java</testExclude>
+					</testExcludes>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.6.0</version>
+				<configuration>
+					<argLine>-Xmx${test.xmx}</argLine>
+				</configuration>
+			</plugin>
+
+			<!-- The jar is built from bin/ (outputDirectory). Without Main-Class: every benchmark has its own main. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.4.2</version>
+			</plugin>
+
+			<!-- "mvn clean" must also remove bin/, as the old "ant clean" did. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>3.4.0</version>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>${project.basedir}/bin</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<!-- MPJ versions (NPB.MPJ). FastMPJ is not published in Maven Central, so mpj.jar is taken from the
+		     local installation, ${fmpj.home}/lib/mpj.jar. The profile is activated automatically when the
+		     FMPJ_HOME environment variable is set; otherwise use: mvn compile -Pmpj -Dfmpj.home=/path/to/fastmpj
+		     Without it only NPB.SER and NPB.common are built, and FastMPJ is not needed. -->
+		<profile>
+			<id>mpj</id>
+			<activation>
+				<property>
+					<name>env.FMPJ_HOME</name>
+				</property>
+			</activation>
+			<properties>
+				<!-- Equivalent of the old build.xml "mpjbase" property. -Dfmpj.home overrides it. -->
+				<fmpj.home>${env.FMPJ_HOME}</fmpj.home>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>es.udc.fastmpj</groupId>
+					<artifactId>mpj</artifactId>
+					<version>local</version>
+					<scope>system</scope>
+					<systemPath>${fmpj.home}/lib/mpj.jar</systemPath>
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<configuration>
+							<excludes combine.self="override"/>
+							<testExcludes combine.self="override"/>
+						</configuration>
+					</plugin>
+					<!-- MpjLaunchTest launches the benchmarks with fmpjrun: it needs to know where FastMPJ is. -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<systemPropertyVariables>
+								<fmpj.home>${fmpj.home}</fmpj.home>
+							</systemPropertyVariables>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

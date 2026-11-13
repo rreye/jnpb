@@ -1,0 +1,32 @@
+# Build output (Maven writes main classes to bin/)
+target/
+bin/
+
+# Java
+*.class
+*.jar
+*.war
+hs_err_pid*
+replay_pid*
+
+# Logs and run output
+*.log
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+nbproject/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# Python
+__pycache__/
+*.pyc
