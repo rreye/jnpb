@@ -58,7 +58,7 @@ public class BMArgs {
 				if (CLASS != 'A' && CLASS != 'B' && CLASS != 'C'
 					&& CLASS != 'S' && CLASS != 'W' && CLASS != 'D'
 					&& CLASS != 'E') {
-					System.out
+					System.err
 					.println("Classes allowed are A, B, C, D, E, W and S.");
 					commandLineError(BMName);
 				}
@@ -80,7 +80,7 @@ public class BMArgs {
 					                                                                                                      .charAt(7)));
 				if (GRAPH.compareTo("BH") != 0 && GRAPH.compareTo("WH") != 0
 						&& GRAPH.compareTo("SH") != 0) {
-					System.out
+					System.err
 					.println("Graphs types are BH, WH and SH. Entered: "
 							+ GRAPH);
 					commandLineError(BMName);
@@ -94,22 +94,22 @@ public class BMArgs {
 
 	private static void commandLineError(String BMName) {
 		if ("DT".equals(BMName)) {
-			System.out.println("Usage: mpj_init_command " + BMName
+			System.err.println("Usage: mpj_init_command " + BMName
 					+ " [GRAPH=]{BH|WH|SH} CLASS={A|B|C|D|E|W|S} [DTIMING={true|false}]");
-			System.out.println("{BH|WH|SH} is the type of graph and\n"
+			System.err.println("{BH|WH|SH} is the type of graph and\n"
 					+ "{A|B|C|D|E|W|S} is the size class");
 		} else {
-			System.out.println("Usage: java " + BMName
+			System.err.println("Usage: java " + BMName
 					+ " CLASS={A|B|C|D|E|W|S} [DTIMING={true|false}]");
-			System.out.println("{A|B|C|D|E|W|S} is the size class");
+			System.err.println("{A|B|C|D|E|W|S} is the size class");
 		}
 		System.exit(1);
 	}
 
 	public static void outOfMemoryMessage() {
-		System.out.println("The java maximum heap size is "
-				+ "to small to run this benchmark class");
-		System.out.println("To allocate more memory, use the -XmxN option"
+		System.err.println("The java maximum heap size is "
+				+ "too small to run this benchmark class");
+		System.err.println("To allocate more memory, use the -XmxN option"
 				+ " where N is the number of bytes to be allocated");
 	}
 

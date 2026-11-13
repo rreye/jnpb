@@ -85,6 +85,22 @@
 				</configuration>
 			</plugin>
 
+			<!-- jnpb-<version>-sources.jar for the release (mvn package). -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>package</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
 			<!-- The jar is built from bin/ (outputDirectory). Without Main-Class: every benchmark has its own main. -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

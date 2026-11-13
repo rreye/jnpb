@@ -1,5 +1,7 @@
 # JNPB
 
+[![CI](https://github.com/rreye/jnpb/actions/workflows/ci.yml/badge.svg)](https://github.com/rreye/jnpb/actions/workflows/ci.yml)
+
 NAS Parallel Benchmarks for Java: serial and MPJ (message-passing) versions.
 
 JNPB is an **unofficial** Java port of the [NAS Parallel Benchmarks](https://www.nas.nasa.gov/software/npb.html)

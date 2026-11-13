@@ -957,7 +957,7 @@ public class FT implements Benchmark{
 		} else if (CLASS == 'D') {
 			vdata = vDataD;
 		} else {
-			System.out.println("Invalid class. Verification not performed");
+			System.err.println("Invalid class. Verification not performed");
 			return false;
 		}
 
