@@ -42,14 +42,16 @@ influence of a particular MPJ or MPI implementation, and with the time given by 
 
 Serial and MPJ FT share the same FFT core.
 
-## Class D
+## Class D (time in seconds)
 
-Class D is evaluated for the kernels that fit on the test machine (BT, SP, LU, CG and EP); results pending.
+Class D is evaluated for the kernels that fit on the test machine with a single process (BT, SP, LU, CG and EP;
+IS, MG and FT do not fit). Because of the run time (about 26 h in total), BT, SP, LU and CG were run once; EP is
+the median of 3 repetitions. Java used `-Xmx26g` (`-Xmx2g` for EP); all 28 runs verified successfully.
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
-| BT | TBD | TBD | TBD | TBD | TBD | TBD |
-| SP | TBD | TBD | TBD | TBD | TBD | TBD |
-| LU | TBD | TBD | TBD | TBD | TBD | TBD |
-| CG | TBD | TBD | TBD | TBD | TBD | TBD |
-| EP | TBD | TBD | TBD | TBD | TBD | TBD |
+| BT | 8803.16 | 7486.42 | 1.18 | 11584.11 | 7136.13 | 1.62 |
+| SP | 4832.01 | 4975.03 | 0.97 | 11383.36 | 5639.26 | 2.02 |
+| LU | 5893.63 | 4255.72 | 1.38 | 8994.48 | 4552.63 | 1.98 |
+| CG | 2724.48 | 2887.87 | 0.94 | 2623.21 | 2645.91 | 0.99 |
+| EP | 561.40 | 557.49 | 1.01 | 566.15 | 557.14 | 1.02 |
