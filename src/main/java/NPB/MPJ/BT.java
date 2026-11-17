@@ -1435,13 +1435,13 @@ public class BT implements Benchmark{
 		for (k = -1; k <= cellSize[2][c]; k++){
 			for (j = -1; j <= cellSize[1][c]; j++){
 				for (i = -1; i <= cellSize[0][c]; i++){
-					rho_inv = 1.0/u[5*ix(i,j,k,c)+0];
-					rhoI[ix(i,j,k,c)] = rho_inv;
-					us[ix(i,j,k,c)] = u[5*ix(i,j,k,c)+1] * rho_inv;
-					vs[ix(i,j,k,c)] = u[5*ix(i,j,k,c)+2] * rho_inv;
-					ws[ix(i,j,k,c)] = u[5*ix(i,j,k,c)+3] * rho_inv;
-					square[ix(i,j,k,c)] = 0.5* ( u[5*ix(i,j,k,c)+1]*u[5*ix(i,j,k,c)+1] + u[5*ix(i,j,k,c)+2]*u[5*ix(i,j,k,c)+2] + u[5*ix(i,j,k,c)+3]*u[5*ix(i,j,k,c)+3] ) * rho_inv;
-					qs[ix(i,j,k,c)] = square[ix(i,j,k,c)] * rho_inv;
+					rho_inv = 1.0/u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0];
+					rhoI[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] = rho_inv;
+					us[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] = u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] * rho_inv;
+					vs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] = u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] * rho_inv;
+					ws[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] = u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] * rho_inv;
+					square[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] = 0.5* ( u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1]*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2]*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3]*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] ) * rho_inv;
+					qs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] = square[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] * rho_inv;
 				}
 			}
 		}
@@ -1449,64 +1449,94 @@ public class BT implements Benchmark{
 			for (j = 0; j <= cellSize[1][c]-1; j++){
 				for (i = 0; i <= cellSize[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = forcing[5*ix(i,j,k,c)+m];
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = forcing[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m];
 					}
 				}
 			}
 		}
 	}
 
+	/*
+	 * Optimization (2026-11-16): rhsX/rhsY/rhsZ are split into one small method per loop nest and ix() is written out in place in
+	 * rhsX/Y/Z, rhsPrepare and add (the originals were recompiled and C2 did not always inline ix(): rhsX grew 9.9x from class B to C).
+	 * Same operations and order: bit-identical results.
+	 */
+
 	/* xi-direction flux differences and dissipation */
 	private void rhsX(int c){
+		int i, j, k, m;
+		double uijk, um1, up1;
+		rhsX_0(c);
+		rhsX_1(c);
+		rhsX_2(c);
+		rhsX_3(c);
+	}
+
+	private void rhsX_0(int c){
 		int i, j, k, m;
 		double uijk, um1, up1;
 		for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
-					uijk = us[ix(i,j,k,c)];
-					up1 = us[ix(i+1,j,k,c)];
-					um1 = us[ix(i-1,j,k,c)];
-					rhs[5*ix(i,j,k,c)+0] = rhs[5*ix(i,j,k,c)+0] + dx1tx1 * (u[5*ix(i+1,j,k,c)+0] - 2.0*u[5*ix(i,j,k,c)+0] + u[5*ix(i-1,j,k,c)+0]) - tx2 * (u[5*ix(i+1,j,k,c)+1] - u[5*ix(i-1,j,k,c)+1]);
-					rhs[5*ix(i,j,k,c)+1] = rhs[5*ix(i,j,k,c)+1] + dx2tx1 * (u[5*ix(i+1,j,k,c)+1] - 2.0*u[5*ix(i,j,k,c)+1] + u[5*ix(i-1,j,k,c)+1]) + xxcon2*con43 * (up1 - 2.0*uijk + um1) - tx2 * (u[5*ix(i+1,j,k,c)+1]*up1 - u[5*ix(i-1,j,k,c)+1]*um1 + (u[5*ix(i+1,j,k,c)+4]- square[ix(i+1,j,k,c)]- u[5*ix(i-1,j,k,c)+4]+ square[ix(i-1,j,k,c)])* c2);
-					rhs[5*ix(i,j,k,c)+2] = rhs[5*ix(i,j,k,c)+2] + dx3tx1 * (u[5*ix(i+1,j,k,c)+2] - 2.0*u[5*ix(i,j,k,c)+2] + u[5*ix(i-1,j,k,c)+2]) + xxcon2 * (vs[ix(i+1,j,k,c)] - 2.0*vs[ix(i,j,k,c)] + vs[ix(i-1,j,k,c)]) - tx2 * (u[5*ix(i+1,j,k,c)+2]*up1 - u[5*ix(i-1,j,k,c)+2]*um1);
-					rhs[5*ix(i,j,k,c)+3] = rhs[5*ix(i,j,k,c)+3] + dx4tx1 * (u[5*ix(i+1,j,k,c)+3] - 2.0*u[5*ix(i,j,k,c)+3] + u[5*ix(i-1,j,k,c)+3]) + xxcon2 * (ws[ix(i+1,j,k,c)] - 2.0*ws[ix(i,j,k,c)] + ws[ix(i-1,j,k,c)]) - tx2 * (u[5*ix(i+1,j,k,c)+3]*up1 - u[5*ix(i-1,j,k,c)+3]*um1);
-					rhs[5*ix(i,j,k,c)+4] = rhs[5*ix(i,j,k,c)+4] + dx5tx1 * (u[5*ix(i+1,j,k,c)+4] - 2.0*u[5*ix(i,j,k,c)+4] + u[5*ix(i-1,j,k,c)+4]) + xxcon3 * (qs[ix(i+1,j,k,c)] - 2.0*qs[ix(i,j,k,c)] + qs[ix(i-1,j,k,c)]) + xxcon4 * (up1*up1 - 2.0*uijk*uijk + um1*um1) + xxcon5 * (u[5*ix(i+1,j,k,c)+4]*rhoI[ix(i+1,j,k,c)] - 2.0*u[5*ix(i,j,k,c)+4]*rhoI[ix(i,j,k,c)] + u[5*ix(i-1,j,k,c)+4]*rhoI[ix(i-1,j,k,c)]) - tx2 * ( (c1*u[5*ix(i+1,j,k,c)+4] - c2*square[ix(i+1,j,k,c)])*up1 - (c1*u[5*ix(i-1,j,k,c)+4] - c2*square[ix(i-1,j,k,c)])*um1 );
+					uijk = us[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))];
+					up1 = us[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))];
+					um1 = us[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))];
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] + dx1tx1 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] + u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0]) - tx2 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] - u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1]);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + dx2tx1 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1]) + xxcon2*con43 * (up1 - 2.0*uijk + um1) - tx2 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1]*up1 - u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1]*um1 + (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]- square[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))]- u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]+ square[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))])* c2);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + dx3tx1 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2]) + xxcon2 * (vs[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] - 2.0*vs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + vs[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))]) - tx2 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2]*up1 - u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2]*um1);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] + dx4tx1 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] + u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3]) + xxcon2 * (ws[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] - 2.0*ws[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + ws[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))]) - tx2 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3]*up1 - u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3]*um1);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] + dx5tx1 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] + u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]) + xxcon3 * (qs[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] - 2.0*qs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + qs[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))]) + xxcon4 * (up1*up1 - 2.0*uijk*uijk + um1*um1) + xxcon5 * (u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]*rhoI[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]*rhoI[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]*rhoI[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))]) - tx2 * ( (c1*u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] - c2*square[(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))])*up1 - (c1*u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] - c2*square[(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))])*um1 );
 				}
 			}
 		}
+	}
+
+	private void rhsX_1(int c){
+		int i, j, k, m;
+		double uijk, um1, up1;
 		if (start[0][c] > 0){
 			for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 				for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 					i = 1;
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m]- dssp * ( 5.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i+1,j,k,c)+m] + u[5*ix(i+2,j,k,c)+m]);
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m]- dssp * ( 5.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + u[5*(((i+2)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m]);
 					}
 					i = 2;
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * (-4.0*u[5*ix(i-1,j,k,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i+1,j,k,c)+m] + u[5*ix(i+2,j,k,c)+m]);
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * (-4.0*u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + u[5*(((i+2)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m]);
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsX_2(int c){
+		int i, j, k, m;
+		double uijk, um1, up1;
 		for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = 3*start[0][c]; i <= cellSize[0][c]-3*end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i-2,j,k,c)+m] - 4.0*u[5*ix(i-1,j,k,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i+1,j,k,c)+m] + u[5*ix(i+2,j,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*(((i-2)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + u[5*(((i+2)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsX_3(int c){
+		int i, j, k, m;
+		double uijk, um1, up1;
 		if (end[0][c] > 0){
 			for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 				for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 					i = cellSize[0][c]-3;
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i-2,j,k,c)+m] - 4.0*u[5*ix(i-1,j,k,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i+1,j,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*(((i-2)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i+1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 					i = cellSize[0][c]-2;
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i-2,j,k,c)+m] - 4.0*u[5*ix(i-1,j,k,c)+m] + 5.0*u[5*ix(i,j,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*(((i-2)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*(((i-1)+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + 5.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 				}
 			}
@@ -1517,57 +1547,81 @@ public class BT implements Benchmark{
 	private void rhsY(int c){
 		int i, j, k, m;
 		double vijk, vm1, vp1;
+		rhsY_0(c);
+		rhsY_1(c);
+		rhsY_2(c);
+		rhsY_3(c);
+	}
+
+	private void rhsY_0(int c){
+		int i, j, k, m;
+		double vijk, vm1, vp1;
 		for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
-					vijk = vs[ix(i,j,k,c)];
-					vp1 = vs[ix(i,j+1,k,c)];
-					vm1 = vs[ix(i,j-1,k,c)];
-					rhs[5*ix(i,j,k,c)+0] = rhs[5*ix(i,j,k,c)+0] + dy1ty1 * (u[5*ix(i,j+1,k,c)+0] - 2.0*u[5*ix(i,j,k,c)+0] + u[5*ix(i,j-1,k,c)+0]) - ty2 * (u[5*ix(i,j+1,k,c)+2] - u[5*ix(i,j-1,k,c)+2]);
-					rhs[5*ix(i,j,k,c)+1] = rhs[5*ix(i,j,k,c)+1] + dy2ty1 * (u[5*ix(i,j+1,k,c)+1] - 2.0*u[5*ix(i,j,k,c)+1] + u[5*ix(i,j-1,k,c)+1]) + yycon2 * (us[ix(i,j+1,k,c)] - 2.0*us[ix(i,j,k,c)] + us[ix(i,j-1,k,c)]) - ty2 * (u[5*ix(i,j+1,k,c)+1]*vp1 - u[5*ix(i,j-1,k,c)+1]*vm1);
-					rhs[5*ix(i,j,k,c)+2] = rhs[5*ix(i,j,k,c)+2] + dy3ty1 * (u[5*ix(i,j+1,k,c)+2] - 2.0*u[5*ix(i,j,k,c)+2] + u[5*ix(i,j-1,k,c)+2]) + yycon2*con43 * (vp1 - 2.0*vijk + vm1) - ty2 * (u[5*ix(i,j+1,k,c)+2]*vp1 - u[5*ix(i,j-1,k,c)+2]*vm1 + (u[5*ix(i,j+1,k,c)+4] - square[ix(i,j+1,k,c)] - u[5*ix(i,j-1,k,c)+4] + square[ix(i,j-1,k,c)]) *c2);
-					rhs[5*ix(i,j,k,c)+3] = rhs[5*ix(i,j,k,c)+3] + dy4ty1 * (u[5*ix(i,j+1,k,c)+3] - 2.0*u[5*ix(i,j,k,c)+3] + u[5*ix(i,j-1,k,c)+3]) + yycon2 * (ws[ix(i,j+1,k,c)] - 2.0*ws[ix(i,j,k,c)] + ws[ix(i,j-1,k,c)]) - ty2 * (u[5*ix(i,j+1,k,c)+3]*vp1 - u[5*ix(i,j-1,k,c)+3]*vm1);
-					rhs[5*ix(i,j,k,c)+4] = rhs[5*ix(i,j,k,c)+4] + dy5ty1 * (u[5*ix(i,j+1,k,c)+4] - 2.0*u[5*ix(i,j,k,c)+4] + u[5*ix(i,j-1,k,c)+4]) + yycon3 * (qs[ix(i,j+1,k,c)] - 2.0*qs[ix(i,j,k,c)] + qs[ix(i,j-1,k,c)]) + yycon4 * (vp1*vp1 - 2.0*vijk*vijk + vm1*vm1) + yycon5 * (u[5*ix(i,j+1,k,c)+4]*rhoI[ix(i,j+1,k,c)] - 2.0*u[5*ix(i,j,k,c)+4]*rhoI[ix(i,j,k,c)] + u[5*ix(i,j-1,k,c)+4]*rhoI[ix(i,j-1,k,c)]) - ty2 * ((c1*u[5*ix(i,j+1,k,c)+4] - c2*square[ix(i,j+1,k,c)]) * vp1 - (c1*u[5*ix(i,j-1,k,c)+4] - c2*square[ix(i,j-1,k,c)]) * vm1);
+					vijk = vs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))];
+					vp1 = vs[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))];
+					vm1 = vs[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))];
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] + dy1ty1 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+0] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] + u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+0]) - ty2 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+2] - u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+2]);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + dy2ty1 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+1] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+1]) + yycon2 * (us[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))] - 2.0*us[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + us[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))]) - ty2 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+1]*vp1 - u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+1]*vm1);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + dy3ty1 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+2] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+2]) + yycon2*con43 * (vp1 - 2.0*vijk + vm1) - ty2 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+2]*vp1 - u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+2]*vm1 + (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+4] - square[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))] - u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+4] + square[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))]) *c2);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] + dy4ty1 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+3] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] + u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+3]) + yycon2 * (ws[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))] - 2.0*ws[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + ws[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))]) - ty2 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+3]*vp1 - u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+3]*vm1);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] + dy5ty1 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+4] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] + u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+4]) + yycon3 * (qs[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))] - 2.0*qs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + qs[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))]) + yycon4 * (vp1*vp1 - 2.0*vijk*vijk + vm1*vm1) + yycon5 * (u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+4]*rhoI[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]*rhoI[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+4]*rhoI[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))]) - ty2 * ((c1*u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+4] - c2*square[((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))]) * vp1 - (c1*u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+4] - c2*square[((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))]) * vm1);
 				}
 			}
 		}
+	}
+
+	private void rhsY_1(int c){
+		int i, j, k, m;
+		double vijk, vm1, vp1;
 		if (start[1][c] > 0){
 			for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 				j = 1;
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m]- dssp * ( 5.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j+1,k,c)+m] + u[5*ix(i,j+2,k,c)+m]);
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m]- dssp * ( 5.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+m] + u[5*((i+2) + DI*(((j+2)+2) + DJ*((k+2) + DK*c)))+m]);
 					}
 				}
 				j = 2;
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * (-4.0*u[5*ix(i,j-1,k,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j+1,k,c)+m] + u[5*ix(i,j+2,k,c)+m]);
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * (-4.0*u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+m] + u[5*((i+2) + DI*(((j+2)+2) + DJ*((k+2) + DK*c)))+m]);
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsY_2(int c){
+		int i, j, k, m;
+		double vijk, vm1, vp1;
 		for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 			for (j = 3*start[1][c]; j <= cellSize[1][c]-3*end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i,j-2,k,c)+m] - 4.0*u[5*ix(i,j-1,k,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j+1,k,c)+m] + u[5*ix(i,j+2,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*((i+2) + DI*(((j-2)+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+m] + u[5*((i+2) + DI*(((j+2)+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsY_3(int c){
+		int i, j, k, m;
+		double vijk, vm1, vp1;
 		if (end[1][c] > 0){
 			for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 				j = cellSize[1][c]-3;
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i,j-2,k,c)+m] - 4.0*u[5*ix(i,j-1,k,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j+1,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*((i+2) + DI*(((j-2)+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j+1)+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 				}
 				j = cellSize[1][c]-2;
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i,j-2,k,c)+m] - 4.0*u[5*ix(i,j-1,k,c)+m] + 5.0*u[5*ix(i,j,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*((i+2) + DI*(((j-2)+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*(((j-1)+2) + DJ*((k+2) + DK*c)))+m] + 5.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 				}
 			}
@@ -1578,26 +1632,40 @@ public class BT implements Benchmark{
 	private void rhsZ(int c){
 		int i, j, k, m;
 		double wijk, wm1, wp1;
+		rhsZ_0(c);
+		rhsZ_1(c);
+		rhsZ_2(c);
+		rhsZ_3(c);
+	}
+
+	private void rhsZ_0(int c){
+		int i, j, k, m;
+		double wijk, wm1, wp1;
 		for (k = start[2][c]; k <= cellSize[2][c]-end[2][c]-1; k++){
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
-					wijk = ws[ix(i,j,k,c)];
-					wp1 = ws[ix(i,j,k+1,c)];
-					wm1 = ws[ix(i,j,k-1,c)];
-					rhs[5*ix(i,j,k,c)+0] = rhs[5*ix(i,j,k,c)+0] + dz1tz1 * (u[5*ix(i,j,k+1,c)+0] - 2.0*u[5*ix(i,j,k,c)+0] + u[5*ix(i,j,k-1,c)+0]) - tz2 * (u[5*ix(i,j,k+1,c)+3] - u[5*ix(i,j,k-1,c)+3]);
-					rhs[5*ix(i,j,k,c)+1] = rhs[5*ix(i,j,k,c)+1] + dz2tz1 * (u[5*ix(i,j,k+1,c)+1] - 2.0*u[5*ix(i,j,k,c)+1] + u[5*ix(i,j,k-1,c)+1]) + zzcon2 * (us[ix(i,j,k+1,c)] - 2.0*us[ix(i,j,k,c)] + us[ix(i,j,k-1,c)]) - tz2 * (u[5*ix(i,j,k+1,c)+1]*wp1 - u[5*ix(i,j,k-1,c)+1]*wm1);
-					rhs[5*ix(i,j,k,c)+2] = rhs[5*ix(i,j,k,c)+2] + dz3tz1 * (u[5*ix(i,j,k+1,c)+2] - 2.0*u[5*ix(i,j,k,c)+2] + u[5*ix(i,j,k-1,c)+2]) + zzcon2 * (vs[ix(i,j,k+1,c)] - 2.0*vs[ix(i,j,k,c)] + vs[ix(i,j,k-1,c)]) - tz2 * (u[5*ix(i,j,k+1,c)+2]*wp1 - u[5*ix(i,j,k-1,c)+2]*wm1);
-					rhs[5*ix(i,j,k,c)+3] = rhs[5*ix(i,j,k,c)+3] + dz4tz1 * (u[5*ix(i,j,k+1,c)+3] - 2.0*u[5*ix(i,j,k,c)+3] + u[5*ix(i,j,k-1,c)+3]) + zzcon2*con43 * (wp1 - 2.0*wijk + wm1) - tz2 * (u[5*ix(i,j,k+1,c)+3]*wp1 - u[5*ix(i,j,k-1,c)+3]*wm1 + (u[5*ix(i,j,k+1,c)+4] - square[ix(i,j,k+1,c)] - u[5*ix(i,j,k-1,c)+4] + square[ix(i,j,k-1,c)]) *c2);
-					rhs[5*ix(i,j,k,c)+4] = rhs[5*ix(i,j,k,c)+4] + dz5tz1 * (u[5*ix(i,j,k+1,c)+4] - 2.0*u[5*ix(i,j,k,c)+4] + u[5*ix(i,j,k-1,c)+4]) + zzcon3 * (qs[ix(i,j,k+1,c)] - 2.0*qs[ix(i,j,k,c)] + qs[ix(i,j,k-1,c)]) + zzcon4 * (wp1*wp1 - 2.0*wijk*wijk + wm1*wm1) + zzcon5 * (u[5*ix(i,j,k+1,c)+4]*rhoI[ix(i,j,k+1,c)] - 2.0*u[5*ix(i,j,k,c)+4]*rhoI[ix(i,j,k,c)] + u[5*ix(i,j,k-1,c)+4]*rhoI[ix(i,j,k-1,c)]) - tz2 * ( (c1*u[5*ix(i,j,k+1,c)+4] - c2*square[ix(i,j,k+1,c)])*wp1 - (c1*u[5*ix(i,j,k-1,c)+4] - c2*square[ix(i,j,k-1,c)])*wm1);
+					wijk = ws[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))];
+					wp1 = ws[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))];
+					wm1 = ws[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))];
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] + dz1tz1 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+0] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+0] + u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+0]) - tz2 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+3] - u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+3]);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + dz2tz1 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+1] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+1] + u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+1]) + zzcon2 * (us[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))] - 2.0*us[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + us[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))]) - tz2 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+1]*wp1 - u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+1]*wm1);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + dz3tz1 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+2] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+2] + u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+2]) + zzcon2 * (vs[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))] - 2.0*vs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + vs[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))]) - tz2 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+2]*wp1 - u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+2]*wm1);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] + dz4tz1 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+3] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+3] + u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+3]) + zzcon2*con43 * (wp1 - 2.0*wijk + wm1) - tz2 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+3]*wp1 - u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+3]*wm1 + (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+4] - square[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))] - u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+4] + square[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))]) *c2);
+					rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] + dz5tz1 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+4] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4] + u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+4]) + zzcon3 * (qs[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))] - 2.0*qs[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + qs[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))]) + zzcon4 * (wp1*wp1 - 2.0*wijk*wijk + wm1*wm1) + zzcon5 * (u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+4]*rhoI[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))] - 2.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+4]*rhoI[((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))] + u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+4]*rhoI[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))]) - tz2 * ( (c1*u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+4] - c2*square[((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))])*wp1 - (c1*u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+4] - c2*square[((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))])*wm1);
 				}
 			}
 		}
+	}
+
+	private void rhsZ_1(int c){
+		int i, j, k, m;
+		double wijk, wm1, wp1;
 		if (start[2][c] > 0){
 			k = 1;
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m]- dssp * ( 5.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j,k+1,c)+m] + u[5*ix(i,j,k+2,c)+m]);
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m]- dssp * ( 5.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+m] + u[5*((i+2) + DI*((j+2) + DJ*(((k+2)+2) + DK*c)))+m]);
 					}
 				}
 			}
@@ -1605,26 +1673,36 @@ public class BT implements Benchmark{
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * (-4.0*u[5*ix(i,j,k-1,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j,k+1,c)+m] + u[5*ix(i,j,k+2,c)+m]);
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * (-4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+m] + u[5*((i+2) + DI*((j+2) + DJ*(((k+2)+2) + DK*c)))+m]);
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsZ_2(int c){
+		int i, j, k, m;
+		double wijk, wm1, wp1;
 		for (k = 3*start[2][c]; k <= cellSize[2][c]-3*end[2][c]-1; k++){
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i,j,k-2,c)+m] - 4.0*u[5*ix(i,j,k-1,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j,k+1,c)+m] + u[5*ix(i,j,k+2,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*((i+2) + DI*((j+2) + DJ*(((k-2)+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+m] + u[5*((i+2) + DI*((j+2) + DJ*(((k+2)+2) + DK*c)))+m] );
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsZ_3(int c){
+		int i, j, k, m;
+		double wijk, wm1, wp1;
 		if (end[2][c] > 0){
 			k = cellSize[2][c]-3;
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i,j,k-2,c)+m] - 4.0*u[5*ix(i,j,k-1,c)+m] + 6.0*u[5*ix(i,j,k,c)+m] - 4.0*u[5*ix(i,j,k+1,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*((i+2) + DI*((j+2) + DJ*(((k-2)+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+m] + 6.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k+1)+2) + DK*c)))+m] );
 					}
 				}
 			}
@@ -1632,7 +1710,7 @@ public class BT implements Benchmark{
 			for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 				for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 					for (m = 0; m <= 4; m++){
-						rhs[5*ix(i,j,k,c)+m] = rhs[5*ix(i,j,k,c)+m] - dssp * ( u[5*ix(i,j,k-2,c)+m] - 4.0*u[5*ix(i,j,k-1,c)+m] + 5.0*u[5*ix(i,j,k,c)+m] );
+						rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] - dssp * ( u[5*((i+2) + DI*((j+2) + DJ*(((k-2)+2) + DK*c)))+m] - 4.0*u[5*((i+2) + DI*((j+2) + DJ*(((k-1)+2) + DK*c)))+m] + 5.0*u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] );
 					}
 				}
 			}
@@ -1661,7 +1739,7 @@ public class BT implements Benchmark{
 				for (j = start[1][c]; j <= cellSize[1][c]-end[1][c]-1; j++){
 					for (i = start[0][c]; i <= cellSize[0][c]-end[0][c]-1; i++){
 						for (m = 0; m <= 4; m++){
-							u[5*ix(i,j,k,c)+m] = u[5*ix(i,j,k,c)+m] + rhs[5*ix(i,j,k,c)+m];
+							u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] = u[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m] + rhs[5*((i+2) + DI*((j+2) + DJ*((k+2) + DK*c)))+m];
 						}
 					}
 				}

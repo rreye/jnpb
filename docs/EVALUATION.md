@@ -18,7 +18,7 @@ influence of a particular MPJ or MPI implementation, and with the time given by 
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
-| BT | 103.03 | 88.37 | 1.17 | 107.04 | 84.09 | 1.27 |
+| BT | 103.03 | 88.37 | 1.17 | 106.64 | 84.09 | 1.27 |
 | CG | 14.96 | 16.49 | 0.91 | 14.82 | 15.42 | 0.96 |
 | EP | 8.92 | 8.75 | 1.02 | 9.03 | 8.72 | 1.04 |
 | FT | 13.60 | 13.56 | 1.00 | 13.08 | 16.21 | 0.81 |
@@ -31,7 +31,7 @@ influence of a particular MPJ or MPI implementation, and with the time given by 
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
-| BT | 427.03 | 372.39 | 1.15 | 483.63 | 344.09 | 1.41 |
+| BT | 427.03 | 372.39 | 1.15 | 434.68 | 344.09 | 1.26 |
 | CG | 55.90 | 63.38 | 0.88 | 56.65 | 64.22 | 0.88 |
 | EP | 35.68 | 34.88 | 1.02 | 36.11 | 34.82 | 1.04 |
 | FT | 59.27 | 59.43 | 1.00 | 58.87 | 73.42 | 0.80 |
@@ -50,7 +50,7 @@ the median of 3 repetitions. Java used `-Xmx26g` (`-Xmx2g` for EP); all 28 runs 
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
-| BT | 8803.16 | 7486.42 | 1.18 | 11584.11 | 7136.13 | 1.62 |
+| BT | 8803.16 | 7486.42 | 1.18 | 9009.06 | 7136.13 | 1.26 |
 | SP | 4832.01 | 4975.03 | 0.97 | 6154.20 | 5639.26 | 1.09 |
 | LU | 5893.63 | 4255.72 | 1.38 | 6335.53 | 4552.63 | 1.39 |
 | CG | 2724.48 | 2887.87 | 0.94 | 2623.21 | 2645.91 | 0.99 |

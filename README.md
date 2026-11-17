@@ -123,7 +123,7 @@ and class D results are in [docs/EVALUATION.md](docs/EVALUATION.md).
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
-| BT | 103.03 | 88.37 | 1.17 | 107.04 | 84.09 | 1.27 |
+| BT | 103.03 | 88.37 | 1.17 | 106.64 | 84.09 | 1.27 |
 | CG | 14.96 | 16.49 | 0.91 | 14.82 | 15.42 | 0.96 |
 | EP | 8.92 | 8.75 | 1.02 | 9.03 | 8.72 | 1.04 |
 | FT | 13.60 | 13.56 | 1.00 | 13.08 | 16.21 | 0.81 |
