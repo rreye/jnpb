@@ -154,4 +154,9 @@ and on the NPB 3.4.4 MPI version (BT, LU). Every source file states which one it
 problem classes and verification values belong to the NAS Parallel Benchmarks; see the
 [NPB site](https://www.nas.nasa.gov/software/npb.html) for the original authors and credits.
 
+NPB-MPJ is described in Damián Álvarez Mallón, G. L. Taboada, J. Touriño and R. Doallo, "NPB-MPJ: NAS Parallel
+Benchmarks Implementation for Message-Passing in Java", 17th Euromicro International Conference on Parallel,
+Distributed and Network-based Processing (PDP), 2009
+([IEEE Xplore](https://ieeexplore.ieee.org/document/4912932)).
+
 JNPB is released under the MIT License, see `LICENSE`.
