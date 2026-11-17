@@ -130,7 +130,7 @@ and class D results are in [docs/EVALUATION.md](docs/EVALUATION.md).
 | IS | 0.62 | 0.65 | 0.95 | 0.73 | 0.70 | 1.04 |
 | LU | 72.50 | 52.29 | 1.39 | 79.70 | 55.28 | 1.44 |
 | MG | 2.77 | 1.82 | 1.52 | 2.99 | 2.05 | 1.46 |
-| SP | 52.01 | 51.92 | 1.00 | 78.73 | 63.37 | 1.24 |
+| SP | 52.01 | 51.92 | 1.00 | 75.30 | 63.37 | 1.19 |
 
 ## Differences from the official NPB
 

@@ -107,6 +107,7 @@ public class SP implements Benchmark{
 
 	private double rhs[];
 	private double cv[];
+	private double cvP[], rqP[];   /* planes of cv and rhoq/rhos for lhsy0/lhsz0 */
 	private double rhon[];
 	private double rhoq[];
 	private double rhos[];
@@ -254,6 +255,8 @@ public class SP implements Benchmark{
 		ainv = new double[(IMAX+2)*(JMAX+2)*(KMAX+2)*maxCells];
 		rhs = new double[(IMAX+4)*(JMAX+4)*(KMAX+4)*5*maxCells];
 		cv = new double[MAX_CELL_DIM+4];
+		cvP = new double[(MAX_CELL_DIM+4)*(MAX_CELL_DIM+4)];
+		rqP = new double[(MAX_CELL_DIM+4)*(MAX_CELL_DIM+4)];
 		rhon = new double[MAX_CELL_DIM+4];
 		rhoq = new double[MAX_CELL_DIM+4];
 		rhos = new double[MAX_CELL_DIM+4];
@@ -2642,30 +2645,16 @@ public class SP implements Benchmark{
 			/* The first three factors */
 			n = -1;
 			for(int m = 0; m<3; m++){
-				for(int k = start[2][c]+2; k<=ksize-end[2][c]+1; k++){
-					for(int j = jend; j>=jstart+2; j--){
-						for(int i = start[0][c]+2; i<=isize-end[0][c]+1; i++){
-							int j1 = j+1;
-							int j2 = j+2;
-							rhs[position5D(i,j,k,m,c)] = rhs[position5D(i,j,k,m,c)] - lhs[lhsPosition5D(i,j,k,n+4,c)]*rhs[position5D(i,j1,k,m,c)]-lhs[lhsPosition5D(i,j,k,n+5,c)]*rhs[position5D(i,j2,k,m,c)];
-						}
-					}
-				}
+				backY(rhs, lhs, position5D(start[0][c]+2,jend,start[2][c]+2,m,c), lhsPosition5D(start[0][c]+2,jend,start[2][c]+2,n+4,c),
+						isize-end[0][c]-start[0][c], jend-jstart-1, ksize-end[2][c]-start[2][c], DIMI, DIMI_DIMJ, DIMI_DIMJ_DIMK);
 			}
 
 			/* And the remaining two */
 
 			for(int m = 3; m<5; m++){
 				n = (m-2)*5-1;
-				for(int k = start[2][c]+2; k<=ksize-end[2][c]+1; k++){
-					for(int j = jend; j>=jstart+2; j--){
-						for(int i = start[0][c]+2; i<=isize-end[0][c]+1; i++){
-							int j1 = j+1;
-							int j2 = j+2;
-							rhs[position5D(i,j,k,m,c)] = rhs[position5D(i,j,k,m,c)] - lhs[lhsPosition5D(i,j,k,n+4,c)]*rhs[position5D(i,j1,k,m,c)]-lhs[lhsPosition5D(i,j,k,n+5,c)]*rhs[position5D(i,j2,k,m,c)];
-						}
-					}
-				}
+				backY(rhs, lhs, position5D(start[0][c]+2,jend,start[2][c]+2,m,c), lhsPosition5D(start[0][c]+2,jend,start[2][c]+2,n+4,c),
+						isize-end[0][c]-start[0][c], jend-jstart-1, ksize-end[2][c]-start[2][c], DIMI, DIMI_DIMJ, DIMI_DIMJ_DIMK);
 			}
 
 			/* Send on information to the previous processor, if needed */
@@ -3127,30 +3116,16 @@ public class SP implements Benchmark{
 			/* The first three factors */
 			n = -1;
 			for(int m = 0; m<3; m++){
-				for(int k = kend; k>=kstart+2; k--){
-					for(int j = start[1][c]+2; j<=jsize-end[1][c]+1; j++){
-						for(int i = start[0][c]+2; i<=isize-end[0][c]+1; i++){
-							int k1 = k+1;
-							int k2 = k+2;
-							rhs[position5D(i,j,k,m,c)] = rhs[position5D(i,j,k,m,c)] - lhs[lhsPosition5D(i,j,k,n+4,c)]*rhs[position5D(i,j,k1,m,c)]-lhs[lhsPosition5D(i,j,k,n+5,c)]*rhs[position5D(i,j,k2,m,c)];
-						}
-					}
-				}
+				backZ(rhs, lhs, position5D(start[0][c]+2,start[1][c]+2,kend,m,c), lhsPosition5D(start[0][c]+2,start[1][c]+2,kend,n+4,c),
+						isize-end[0][c]-start[0][c], jsize-end[1][c]-start[1][c], kend-kstart-1, DIMI, DIMI_DIMJ, DIMI_DIMJ_DIMK);
 			}
 
 			/* And the remaining two */
 
 			for(int m = 3; m<5; m++){
 				n = (m-2)*5-1;
-				for(int k = kend; k>=kstart+2; k--){
-					for(int j = start[1][c]+2; j<=jsize-end[1][c]+1; j++){
-						for(int i = start[0][c]+2; i<=isize-end[0][c]+1; i++){
-							int k1 = k+1;
-							int k2 = k+2;
-							rhs[position5D(i,j,k,m,c)] = rhs[position5D(i,j,k,m,c)] - lhs[lhsPosition5D(i,j,k,n+4,c)]*rhs[position5D(i,j,k1,m,c)]-lhs[lhsPosition5D(i,j,k,n+5,c)]*rhs[position5D(i,j,k2,m,c)];
-						}
-					}
-				}
+				backZ(rhs, lhs, position5D(start[0][c]+2,start[1][c]+2,kend,m,c), lhsPosition5D(start[0][c]+2,start[1][c]+2,kend,n+4,c),
+						isize-end[0][c]-start[0][c], jsize-end[1][c]-start[1][c], kend-kstart-1, DIMI, DIMI_DIMJ, DIMI_DIMJ_DIMK);
 			}
 
 			/* Send on information to the previous processor, if needed */
@@ -3633,10 +3608,14 @@ public class SP implements Benchmark{
 	 * This function computes the left hand side for the three x-factors
 	 */
 	private void lhsx(int c){
+		lhsx0(c);
+		lhsx1(c);
+		lhsx2(c);
+		lhsx3(c);
+		lhsx4(c);
+	}
 
-		/* Treat only cell c */
-
-		/* First fill the lhs for the u-eigenvalue */
+	private void lhsx0(int c){
 		for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
 			int k1 = k+1;
 			for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
@@ -3658,8 +3637,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
-		/* Add fourth order dissipation */
+	private void lhsx1(int c){
 		if(start[0][c] > 0){
 			int i = 3;
 			for(int k = start[2][c]+2; k<=cellSize[2][c]-end[2][c]+1; k++){
@@ -3675,7 +3655,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
+	private void lhsx2(int c){
 		for(int k = start[2][c]+2; k<=cellSize[2][c]-end[2][c]+1; k++){
 			for(int j = start[1][c]+2; j<=cellSize[1][c]-end[1][c]+1; j++){
 				for(int i = 3*start[0][c]+2; i<=cellSize[0][c]-3*end[0][c]+1; i++){
@@ -3687,7 +3669,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
+	private void lhsx3(int c){
 		if(end[0][c] > 0){
 			int i = cellSize[0][c]-1;
 			for(int k = start[2][c]+2; k<=cellSize[2][c]-end[2][c]+1; k++){
@@ -3703,11 +3687,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
-		/*
-		 * Subsequently, fill the other factors (u+c), (u-c) by a4ing
-		 * to the first
-		 */
+	private void lhsx4(int c){
 		for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
 			int k1 = k+1;
 			for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
@@ -3728,7 +3710,6 @@ public class SP implements Benchmark{
 				}
 			}
 		}
-
 	}
 
 	/*
@@ -3768,33 +3749,49 @@ public class SP implements Benchmark{
 	 * This function computes the left hand side for the three y-factors
 	 */
 	private void lhsy(int c){
+		lhsy0(c);
+		lhsy1(c);
+		lhsy2(c);
+		lhsy3(c);
+		lhsy4(c);
+	}
 
-		/* Treat only cell c */
-
-		/* First fill the lhs for the u-eigenvalue */
+	/*
+	 * First fill of the y-lhs (rows 0..4). cv/rhoq of the line are kept in planes [j][i] so the loop that writes
+	 * lhs runs along i (contiguous) instead of along j (stride DIMI): same values, same operations.
+	 */
+	private void lhsy0(int c){
+		final int i0 = start[0][c]+1;
+		final int w = cellSize[0][c]-end[0][c]-i0+1;
+		final int jlo = start[1][c];
+		final int jhi = cellSize[1][c]-end[1][c]+1;
 		for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
 			int k1 = k+1;
-			for(int i = start[0][c]+1; i<=cellSize[0][c]-end[0][c]; i++){
-				int i1 = i+1;
-				for(int j = start[1][c]; j<=cellSize[1][c]-end[1][c]+1; j++){
-					int j1 = j+1;
+			for(int j = jlo; j<=jhi; j++){
+				final int row = (j-jlo)*w;
+				for(int i = i0; i<i0+w; i++){
 					double ru1 = c3c4*rhoI[position4D(i,j,k,c)];
-					cv[j1] = vs[position4D(i,j,k,c)];
-					rhoq[j1] = dmax1(dy3+con43*ru1,dy5+c1c5*ru1,dymax+ru1,dy1); 
+					cvP[row+i-i0] = vs[position4D(i,j,k,c)];
+					rqP[row+i-i0] = dmax1(dy3+con43*ru1,dy5+c1c5*ru1,dymax+ru1,dy1);
 				}
-
-				for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
-					int j1 = j+1;
+			}
+			for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
+				int j1 = j+1;
+				final int rm = (j-1-jlo)*w, r0 = (j-jlo)*w, rp = (j+1-jlo)*w;
+				for(int i = i0; i<i0+w; i++){
+					int i1 = i+1;
+					final int q = i-i0;
 					lhs[lhsPosition5D(i1,j1,k1,0,c)] = 0;
-					lhs[lhsPosition5D(i1,j1,k1,1,c)] = -dtty2*cv[j] - dtty1*rhoq[j];
-					lhs[lhsPosition5D(i1,j1,k1,2,c)] = 1 + c2dtty1*rhoq[j1];
-					lhs[lhsPosition5D(i1,j1,k1,3,c)] = dtty2*cv[j1+1] - dtty1*rhoq[j1+1];
+					lhs[lhsPosition5D(i1,j1,k1,1,c)] = -dtty2*cvP[rm+q] - dtty1*rqP[rm+q];
+					lhs[lhsPosition5D(i1,j1,k1,2,c)] = 1 + c2dtty1*rqP[r0+q];
+					lhs[lhsPosition5D(i1,j1,k1,3,c)] = dtty2*cvP[rp+q] - dtty1*rqP[rp+q];
 					lhs[lhsPosition5D(i1,j1,k1,4,c)] = 0;
 				}
 			}
 		}
+	}
 
-		/* Add fourth order dissipation */
+	private void lhsy1(int c){
 		if(start[1][c] > 0){
 			int j = 3;
 			for(int k = start[2][c]+2; k<=cellSize[2][c]-end[2][c]+1; k++){
@@ -3810,7 +3807,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
+	private void lhsy2(int c){
 		for(int k = start[2][c]+2; k<=cellSize[2][c]-end[2][c]+1; k++){
 			for(int j = 3*start[1][c]+2; j<=cellSize[1][c]-3*end[1][c]+1; j++){
 				for(int i = start[0][c]+2; i<=cellSize[0][c]-end[0][c]+1; i++){
@@ -3822,7 +3821,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
+	private void lhsy3(int c){
 		if(end[1][c] > 0){
 			int j = cellSize[1][c]-1;
 			for(int k = start[2][c]+2; k<=cellSize[2][c]-end[2][c]+1; k++){
@@ -3838,11 +3839,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
-		/*
-		 * Subsequently, fill the other factors (u+c), (u-c) by a4ing
-		 * to the first
-		 */
+	private void lhsy4(int c){
 		for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
 			int k1 = k+1;
 			for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
@@ -3863,7 +3862,6 @@ public class SP implements Benchmark{
 				}
 			}
 		}
-
 	}
 
 	/*
@@ -3903,33 +3901,46 @@ public class SP implements Benchmark{
 	 * This function computes the left hand side for the three z-factors
 	 */
 	private void lhsz(int c){
+		lhsz0(c);
+		lhsz1(c);
+		lhsz2(c);
+		lhsz3(c);
+		lhsz4(c);
+	}
 
-		/* Treat only cell c */
-
-		/* First fill the lhs for the u-eigenvalue */
+	/* First fill of the z-lhs: planes [k][i] for cv/rhos, i innermost (see lhsy0). */
+	private void lhsz0(int c){
+		final int i0 = start[0][c]+1;
+		final int w = cellSize[0][c]-end[0][c]-i0+1;
+		final int klo = start[2][c];
+		final int khi = cellSize[2][c]-end[2][c]+1;
 		for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
 			int j1 = j+1;
-			for(int i = start[0][c]+1; i<=cellSize[0][c]-end[0][c]; i++){
-				int i1 = i+1;
-				for(int k = start[2][c]; k<=cellSize[2][c]-end[2][c]+1; k++){
-					int k1 = k+1;
+			for(int k = klo; k<=khi; k++){
+				final int row = (k-klo)*w;
+				for(int i = i0; i<i0+w; i++){
 					double ru1 = c3c4*rhoI[position4D(i,j,k,c)];
-					cv[k1] = ws[position4D(i,j,k,c)];
-					rhos[k1] = dmax1(dz4+con43*ru1,dz5+c1c5*ru1,dzmax+ru1,dz1); 
+					cvP[row+i-i0] = ws[position4D(i,j,k,c)];
+					rqP[row+i-i0] = dmax1(dz4+con43*ru1,dz5+c1c5*ru1,dzmax+ru1,dz1);
 				}
-
-				for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
-					int k1 = k+1;
+			}
+			for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
+				int k1 = k+1;
+				final int rm = (k-1-klo)*w, r0 = (k-klo)*w, rp = (k+1-klo)*w;
+				for(int i = i0; i<i0+w; i++){
+					int i1 = i+1;
+					final int q = i-i0;
 					lhs[lhsPosition5D(i1,j1,k1,0,c)] = 0;
-					lhs[lhsPosition5D(i1,j1,k1,1,c)] = -dttz2*cv[k] - dttz1*rhos[k];
-					lhs[lhsPosition5D(i1,j1,k1,2,c)] = 1 + c2dttz1*rhos[k1];
-					lhs[lhsPosition5D(i1,j1,k1,3,c)] = dttz2*cv[k1+1] - dttz1*rhos[k1+1];
+					lhs[lhsPosition5D(i1,j1,k1,1,c)] = -dttz2*cvP[rm+q] - dttz1*rqP[rm+q];
+					lhs[lhsPosition5D(i1,j1,k1,2,c)] = 1 + c2dttz1*rqP[r0+q];
+					lhs[lhsPosition5D(i1,j1,k1,3,c)] = dttz2*cvP[rp+q] - dttz1*rqP[rp+q];
 					lhs[lhsPosition5D(i1,j1,k1,4,c)] = 0;
 				}
 			}
 		}
+	}
 
-		/* Add fourth order dissipation */
+	private void lhsz1(int c){
 		if(start[2][c] > 0){
 			int k = 3;
 			for(int j = start[1][c]+2; j<=cellSize[1][c]-end[1][c]+1; j++){
@@ -3945,7 +3956,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
+	private void lhsz2(int c){
 		for(int k = 3*start[2][c]+2; k<=cellSize[2][c]-3*end[2][c]+1; k++){
 			for(int j = start[1][c]+2; j<=cellSize[1][c]-end[1][c]+1; j++){
 				for(int i = start[0][c]+2; i<=cellSize[0][c]-end[0][c]+1; i++){
@@ -3957,7 +3970,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
+	private void lhsz3(int c){
 		if(end[2][c] > 0){
 			int k = cellSize[2][c]-1;
 			for(int j = start[1][c]+2; j<=cellSize[1][c]-end[1][c]+1; j++){
@@ -3973,11 +3988,9 @@ public class SP implements Benchmark{
 				}
 			}
 		}
+	}
 
-		/*
-		 * Subsequently, fill the other factors (u+c), (u-c) by a4ing
-		 * to the first
-		 */
+	private void lhsz4(int c){
 		for(int k = start[2][c]+1; k<=cellSize[2][c]-end[2][c]; k++){
 			int k1 = k+1;
 			for(int j = start[1][c]+1; j<=cellSize[1][c]-end[1][c]; j++){
@@ -3998,7 +4011,6 @@ public class SP implements Benchmark{
 				}
 			}
 		}
-
 	}
 
 	/*
@@ -4416,6 +4428,37 @@ public class SP implements Benchmark{
 	 * This methods organizes the memory in the same way that fortran does,
 	 * to facilitate the code translation and efficiency.
 	 */
+	/*
+	 * Back-substitution of the y-lines for one component: the index arithmetic is explicit (r, l) and the loops
+	 * live in a small method, so C2 does not depend on inlining position5D/lhsPosition5D from the big ySolve.
+	 * Same operations, same order as before. r0/l0: element (i0, jend, k0) of rhs / lhs(n+4); sj, sk: strides of
+	 * j and k; s5: lhs stride of the next coefficient (n+5).
+	 */
+	private static void backY(double[] rhs, double[] lhs, int r0, int l0, int ni, int nj, int nk, int sj, int sk, int s5){
+		for(int kk = 0; kk<nk; kk++){
+			for(int jj = 0; jj<nj; jj++){
+				final int r = r0 + kk*sk - jj*sj;
+				final int l = l0 + kk*sk - jj*sj;
+				for(int i = 0; i<ni; i++){
+					rhs[r+i] = rhs[r+i] - lhs[l+i]*rhs[r+i+sj]-lhs[l+i+s5]*rhs[r+i+2*sj];
+				}
+			}
+		}
+	}
+
+	/* Same for the z-lines: r0/l0 are element (i0, j0, kend); k runs downwards. */
+	private static void backZ(double[] rhs, double[] lhs, int r0, int l0, int ni, int nj, int nk, int sj, int sk, int s5){
+		for(int kk = 0; kk<nk; kk++){
+			for(int jj = 0; jj<nj; jj++){
+				final int r = r0 + jj*sj - kk*sk;
+				final int l = l0 + jj*sj - kk*sk;
+				for(int i = 0; i<ni; i++){
+					rhs[r+i] = rhs[r+i] - lhs[l+i]*rhs[r+i+sk]-lhs[l+i+s5]*rhs[r+i+2*sk];
+				}
+			}
+		}
+	}
+
 	private int position5D(int i, int j, int k, int m, int c) {
 		return i + j * DIMI + k * DIMI_DIMJ + m * DIMI_DIMJ_DIMK
 		+ c * DIMI_DIMJ_DIMK_DIMM;
