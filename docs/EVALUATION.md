@@ -44,9 +44,11 @@ Serial and MPJ FT share the same FFT core.
 
 ## Class D (time in seconds)
 
-Class D is evaluated for the kernels that fit on the test machine with a single process (BT, SP, LU, CG and EP;
-IS, MG and FT do not fit). Because of the run time (about 26 h in total), BT, SP, LU and CG were run once; EP is
-the median of 3 repetitions. Java used `-Xmx26g` (`-Xmx2g` for EP); all 28 runs verified successfully.
+Class D is evaluated for the kernels that fit on the test machine (31 GB of RAM, no swap) with a single process: BT, SP,
+LU, CG, EP and MG (IS and FT do not fit). Because of the run time, BT, SP, LU, CG and MG were run once; EP is the median
+of 3 repetitions. Java used `-Xmx26g` (`-Xmx28g` for MG, which peaks at 27.2 GB of resident memory and leaves about 2 GB free;
+`-Xmx2g` for EP); all 31 runs verified successfully. MG class D with the official MPI code is not reported: the unmodified
+NPB 3.4.4 binary crashes with a segmentation fault (in `zero3`) as soon as it starts with one process.
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
@@ -55,3 +57,4 @@ the median of 3 repetitions. Java used `-Xmx26g` (`-Xmx2g` for EP); all 28 runs 
 | LU | 5893.63 | 4255.72 | 1.38 | 6335.53 | 4552.63 | 1.39 |
 | CG | 2724.48 | 2887.87 | 0.94 | 2623.21 | 2645.91 | 0.99 |
 | EP | 561.40 | 557.49 | 1.01 | 566.15 | 557.14 | 1.02 |
+| MG | 433.37 | 359.23 | 1.21 | 457.01 | - | - |
