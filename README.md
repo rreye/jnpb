@@ -115,22 +115,24 @@ regenerated.
 
 The goal of the evaluation is the efficiency of the Java code, not of the communications, so every result is
 measured with one process and compared with the official NPB 3.4.4 (OpenMP without OpenMP for the serial
-versions, MPI for the MPJ versions) built with GCC/gfortran 14.2.0 `-O3`. Values below are medians of 5
-repetitions, in seconds; the ratio is Java time over reference time. Machine, JVM flags, methodology, class C
-and class D results are in [docs/EVALUATION.md](docs/EVALUATION.md).
+versions, MPI for the MPJ versions) built with GCC/gfortran 14.2.0 `-O3`. In particular, MPJ is compared with
+MPI using a single process on purpose: the aim is to show the "pure" performance of Java, without the impact of
+the communications, which depends more on the message-passing library used than on Java itself. Values below
+are medians of 5 repetitions, in seconds; the ratio is Java time over reference time. Machine, JVM flags,
+methodology, and class B and class D results are in [docs/EVALUATION.md](docs/EVALUATION.md).
 
-### Class B (time in seconds)
+### Class C (time in seconds)
 
 | Kernel | Java SER | OpenMP (no OpenMP) | ratio | Java MPJ | MPI | ratio |
 |---|--:|--:|--:|--:|--:|--:|
-| BT | 103.03 | 88.37 | 1.17 | 106.64 | 84.09 | 1.27 |
-| CG | 14.96 | 16.49 | 0.91 | 14.82 | 15.42 | 0.96 |
-| EP | 8.92 | 8.75 | 1.02 | 9.03 | 8.72 | 1.04 |
-| FT | 13.60 | 13.56 | 1.00 | 13.08 | 16.21 | 0.81 |
-| IS | 0.62 | 0.65 | 0.95 | 0.73 | 0.70 | 1.04 |
-| LU | 72.50 | 52.29 | 1.39 | 79.18 | 55.28 | 1.43 |
-| MG | 2.77 | 1.82 | 1.52 | 2.99 | 2.05 | 1.46 |
-| SP | 52.01 | 51.92 | 1.00 | 75.30 | 63.37 | 1.19 |
+| BT | 427.03 | 372.39 | 1.15 | 434.68 | 344.09 | 1.26 |
+| CG | 55.90 | 63.38 | 0.88 | 56.65 | 64.22 | 0.88 |
+| EP | 35.68 | 34.88 | 1.02 | 36.11 | 34.82 | 1.04 |
+| FT | 59.27 | 59.43 | 1.00 | 58.87 | 73.42 | 0.80 |
+| IS | 2.47 | 2.58 | 0.96 | 2.91 | 2.81 | 1.04 |
+| LU | 299.75 | 216.57 | 1.38 | 325.90 | 227.44 | 1.43 |
+| MG | 21.77 | 15.19 | 1.43 | 23.01 | 16.43 | 1.40 |
+| SP | 225.61 | 232.37 | 0.97 | 306.17 | 267.32 | 1.15 |
 
 ## Differences from the official NPB
 
