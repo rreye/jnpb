@@ -1281,12 +1281,17 @@ public class LU implements Benchmark{
 	}
 
 	/*
+	 * Optimization (2026-11-16): rhsX/rhsY/rhsZ are split into one small method per loop nest (the 2.3-2.7 kB originals were recompiled
+	 * several times and, in some compilations, C2 did not inline ix() in their ~100 call sites: ix() at ~71x the cycles from class B to C)
+	 * and ix() is written out in place. Same operations and order: bit-identical results.
+	 */
+	/*
 	 * steady-state residuals: x direction
 	 */
 	private void rhsX(){
 
-		int i, j, k, m, iex, l1, l2, ist1;
-		int iend1, jst1, jend1;
+		int i, j, k, m, iex, l1, l2, ist1 = 0;
+		int iend1 = 0, jst1 = 0, jend1 = 0;
 		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
 		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
 		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
@@ -1304,77 +1309,140 @@ public class LU implements Benchmark{
 		if (south == -1) iend1 = nx - 3;
 		for (k = 2; k <= nz - 1; k++){
 			for (j = jst; j <= jend; j++){
-				for (i = l1; i <= l2; i++){
-					flux[ix(i, j, k)] = u[ix(i, j, k) + 1];
-					u21 = u[ix(i, j, k) + 1] / u[ix(i, j, k)];
-					q = 0.50e+00 * (u[ix(i, j, k) + 1] * u[ix(i, j, k) + 1] + u[ix(i, j, k) + 2] * u[ix(i, j, k) + 2]
-							+ u[ix(i, j, k) + 3] * u[ix(i, j, k) + 3]) / u[ix(i, j, k)];
-					flux[ix(i, j, k) + 1] = u[ix(i, j, k) + 1] * u21 + c2 * (u[ix(i, j, k) + 4] - q);
-					flux[ix(i, j, k) + 2] = u[ix(i, j, k) + 2] * u21;
-					flux[ix(i, j, k) + 3] = u[ix(i, j, k) + 3] * u21;
-					flux[ix(i, j, k) + 4] = (c1 * u[ix(i, j, k) + 4] - c2 * q) * u21;
-				}
-				for (i = ist; i <= iend; i++){
-					for (m = 1; m <= 5; m++){
-						rsd[ix(i, j, k) + (m - 1)] = rsd[ix(i, j, k) + (m - 1)] - tx2 * (flux[ix(i + 1, j, k) + (m - 1)]
-								- flux[ix(i - 1, j, k) + (m - 1)]);
-					}
-				}
-				for (i = ist; i <= l2; i++){
-					tmp = 1.0e+00 / u[ix(i, j, k)];
-					u21i = tmp * u[ix(i, j, k) + 1];
-					u31i = tmp * u[ix(i, j, k) + 2];
-					u41i = tmp * u[ix(i, j, k) + 3];
-					u51i = tmp * u[ix(i, j, k) + 4];
-					tmp = 1.0e+00 / u[ix(i - 1, j, k)];
-					u21im1 = tmp * u[ix(i - 1, j, k) + 1];
-					u31im1 = tmp * u[ix(i - 1, j, k) + 2];
-					u41im1 = tmp * u[ix(i - 1, j, k) + 3];
-					u51im1 = tmp * u[ix(i - 1, j, k) + 4];
-					flux[ix(i, j, k) + 1] = (4.0e+00 / 3.0e+00) * tx3 * (u21i - u21im1);
-					flux[ix(i, j, k) + 2] = tx3 * (u31i - u31im1);
-					flux[ix(i, j, k) + 3] = tx3 * (u41i - u41im1);
-					flux[ix(i, j, k) + 4] = 0.50e+00 * (1.0e+00 - c1 * c5) * tx3 * ((sq(u21i) + sq(u31i) + sq(u41i)) - (sq(u21im1)
-							+ sq(u31im1) + sq(u41im1))) + (1.0e+00 / 6.0e+00) * tx3 * (sq(u21i) - sq(u21im1)) + c1 * c5 * tx3 * (u51i - u51im1);
-				}
-				for (i = ist; i <= iend; i++){
-					rsd[ix(i, j, k)] = rsd[ix(i, j, k)] + dx1 * tx1 * (u[ix(i - 1, j, k)] - 2.0e+00 * u[ix(i, j, k)]
-							+ u[ix(i + 1, j, k)]);
-					rsd[ix(i, j, k) + 1] = rsd[ix(i, j, k) + 1] + tx3 * c3 * c4 * (flux[ix(i + 1, j, k) + 1] - flux[ix(i, j, k) + 1])
-							+ dx2 * tx1 * (u[ix(i - 1, j, k) + 1] - 2.0e+00 * u[ix(i, j, k) + 1] + u[ix(i + 1, j, k) + 1]);
-					rsd[ix(i, j, k) + 2] = rsd[ix(i, j, k) + 2] + tx3 * c3 * c4 * (flux[ix(i + 1, j, k) + 2] - flux[ix(i, j, k) + 2])
-							+ dx3 * tx1 * (u[ix(i - 1, j, k) + 2] - 2.0e+00 * u[ix(i, j, k) + 2] + u[ix(i + 1, j, k) + 2]);
-					rsd[ix(i, j, k) + 3] = rsd[ix(i, j, k) + 3] + tx3 * c3 * c4 * (flux[ix(i + 1, j, k) + 3] - flux[ix(i, j, k) + 3])
-							+ dx4 * tx1 * (u[ix(i - 1, j, k) + 3] - 2.0e+00 * u[ix(i, j, k) + 3] + u[ix(i + 1, j, k) + 3]);
-					rsd[ix(i, j, k) + 4] = rsd[ix(i, j, k) + 4] + tx3 * c3 * c4 * (flux[ix(i + 1, j, k) + 4] - flux[ix(i, j, k) + 4])
-							+ dx5 * tx1 * (u[ix(i - 1, j, k) + 4] - 2.0e+00 * u[ix(i, j, k) + 4] + u[ix(i + 1, j, k) + 4]);
-				}
-				if (north == -1){
-					for (m = 1; m <= 5; m++){
-						rsd[ix(2, j, k) + (m - 1)] = rsd[ix(2, j, k) + (m - 1)] - dssp * (5.0e+00 * u[ix(2, j, k) + (m - 1)]
-								- 4.0e+00 * u[ix(3, j, k) + (m - 1)] + u[ix(4, j, k) + (m - 1)]);
-						rsd[ix(3, j, k) + (m - 1)] = rsd[ix(3, j, k) + (m - 1)] - dssp * (-(4.0e+00 * u[ix(2, j, k) + (m - 1)])
-								+ 6.0e+00 * u[ix(3, j, k) + (m - 1)] - 4.0e+00 * u[ix(4, j, k) + (m - 1)] + u[ix(5, j, k) + (m - 1)]);
-					}
-				}
-				for (i = ist1; i <= iend1; i++){
-					for (m = 1; m <= 5; m++){
-						rsd[ix(i, j, k) + (m - 1)] = rsd[ix(i, j, k) + (m - 1)] - dssp * (u[ix(i - 2, j, k) + (m - 1)]
-								- 4.0e+00 * u[ix(i - 1, j, k) + (m - 1)] + 6.0e+00 * u[ix(i, j, k) + (m - 1)] - 4.0e+00 * u[ix(i + 1, j, k) + (m - 1)]
-								+ u[ix(i + 2, j, k) + (m - 1)]);
-					}
-				}
-				if (south == -1){
-					for (m = 1; m <= 5; m++){
-						rsd[ix(nx - 2, j, k) + (m - 1)] = rsd[ix(nx - 2, j, k) + (m - 1)] - dssp * (u[ix(nx - 4, j, k) + (m - 1)]
-								- 4.0e+00 * u[ix(nx - 3, j, k) + (m - 1)] + 6.0e+00 * u[ix(nx - 2, j, k) + (m - 1)]
-								- 4.0e+00 * u[ix(nx - 1, j, k) + (m - 1)]);
-						rsd[ix(nx - 1, j, k) + (m - 1)] = rsd[ix(nx - 1, j, k) + (m - 1)] - dssp * (u[ix(nx - 3, j, k) + (m - 1)]
-								- 4.0e+00 * u[ix(nx - 2, j, k) + (m - 1)] + 5.0e+00 * u[ix(nx - 1, j, k) + (m - 1)]);
-					}
-				}
+				rhsX_0(j, k, l1, l2, ist1, iend1, jst1, jend1);
+				rhsX_1(j, k, l1, l2, ist1, iend1, jst1, jend1);
+				rhsX_2(j, k, l1, l2, ist1, iend1, jst1, jend1);
+				rhsX_3(j, k, l1, l2, ist1, iend1, jst1, jend1);
+				rhsX_4(j, k, l1, l2, ist1, iend1, jst1, jend1);
+				rhsX_5(j, k, l1, l2, ist1, iend1, jst1, jend1);
+				rhsX_6(j, k, l1, l2, ist1, iend1, jst1, jend1);
 			}
 		}
+	}
+
+	private void rhsX_0(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				for (i = l1; i <= l2; i++){
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1];
+					u21 = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					q = 0.50e+00 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2]
+							+ u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3]) / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] * u21 + c2 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - q);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] * u21;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] * u21;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = (c1 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - c2 * q) * u21;
+				}
+	}
+
+	private void rhsX_1(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				for (i = ist; i <= iend; i++){
+					for (m = 1; m <= 5; m++){
+						rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - tx2 * (flux[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								- flux[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]);
+					}
+				}
+	}
+
+	private void rhsX_2(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				for (i = ist; i <= l2; i++){
+					tmp = 1.0e+00 / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					u21i = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1];
+					u31i = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2];
+					u41i = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3];
+					u51i = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4];
+					tmp = 1.0e+00 / u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					u21im1 = tmp * u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1];
+					u31im1 = tmp * u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2];
+					u41im1 = tmp * u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3];
+					u51im1 = tmp * u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4];
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = (4.0e+00 / 3.0e+00) * tx3 * (u21i - u21im1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = tx3 * (u31i - u31im1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = tx3 * (u41i - u41im1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = 0.50e+00 * (1.0e+00 - c1 * c5) * tx3 * ((sq(u21i) + sq(u31i) + sq(u41i)) - (sq(u21im1)
+							+ sq(u31im1) + sq(u41im1))) + (1.0e+00 / 6.0e+00) * tx3 * (sq(u21i) - sq(u21im1)) + c1 * c5 * tx3 * (u51i - u51im1);
+				}
+	}
+
+	private void rhsX_3(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				for (i = ist; i <= iend; i++){
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] + dx1 * tx1 * (u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1))))] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))]
+							+ u[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1))))]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + tx3 * c3 * c4 * (flux[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1])
+							+ dx2 * tx1 * (u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + u[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] + tx3 * c3 * c4 * (flux[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2])
+							+ dx3 * tx1 * (u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] + u[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] + tx3 * c3 * c4 * (flux[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3])
+							+ dx4 * tx1 * (u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] + u[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] + tx3 * c3 * c4 * (flux[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4])
+							+ dx5 * tx1 * (u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] + u[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4]);
+				}
+	}
+
+	private void rhsX_4(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				if (north == -1){
+					for (m = 1; m <= 5; m++){
+						rsd[(5*(((2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (5.0e+00 * u[(5*(((2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((3)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] + u[(5*(((4)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]);
+						rsd[(5*(((3)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((3)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (-(4.0e+00 * u[(5*(((2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)])
+								+ 6.0e+00 * u[(5*(((3)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - 4.0e+00 * u[(5*(((4)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] + u[(5*(((5)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]);
+					}
+				}
+	}
+
+	private void rhsX_5(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				for (i = ist1; i <= iend1; i++){
+					for (m = 1; m <= 5; m++){
+						rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((i - 2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] + 6.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - 4.0e+00 * u[(5*(((i + 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								+ u[(5*(((i + 2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]);
+					}
+				}
+	}
+
+	private void rhsX_6(int j, int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
+				if (south == -1){
+					for (m = 1; m <= 5; m++){
+						rsd[(5*(((nx - 2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((nx - 2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((nx - 4)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((nx - 3)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] + 6.0e+00 * u[(5*(((nx - 2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((nx - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]);
+						rsd[(5*(((nx - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((nx - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((nx - 3)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((nx - 2)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] + 5.0e+00 * u[(5*(((nx - 1)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)]);
+					}
+				}
 	}
 
 	/*
@@ -1382,8 +1450,8 @@ public class LU implements Benchmark{
 	 */
 	private void rhsY(){
 
-		int i, j, k, m, iex, l1, l2, ist1;
-		int iend1, jst1, jend1;
+		int i, j, k, m, iex, l1, l2, ist1 = 0;
+		int iend1 = 0, jst1 = 0, jend1 = 0;
 		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
 		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
 		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
@@ -1400,194 +1468,312 @@ public class LU implements Benchmark{
 		if (west == -1) jst1 = 4;
 		if (east == -1) jend1 = ny - 3;
 		for (k = 2; k <= nz - 1; k++){
+			rhsY_0(k, l1, l2, ist1, iend1, jst1, jend1);
+			rhsY_1(k, l1, l2, ist1, iend1, jst1, jend1);
+			rhsY_2(k, l1, l2, ist1, iend1, jst1, jend1);
+			rhsY_3(k, l1, l2, ist1, iend1, jst1, jend1);
+			rhsY_4(k, l1, l2, ist1, iend1, jst1, jend1);
+			rhsY_5(k, l1, l2, ist1, iend1, jst1, jend1);
+			rhsY_6(k, l1, l2, ist1, iend1, jst1, jend1);
+		}
+	}
+
+	private void rhsY_0(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			for (j = l1; j <= l2; j++){
 				for (i = ist; i <= iend; i++){
-					flux[ix(i, j, k)] = u[ix(i, j, k) + 2];
-					u31 = u[ix(i, j, k) + 2] / u[ix(i, j, k)];
-					q = 0.50e+00 * (u[ix(i, j, k) + 1] * u[ix(i, j, k) + 1] + u[ix(i, j, k) + 2] * u[ix(i, j, k) + 2]
-							+ u[ix(i, j, k) + 3] * u[ix(i, j, k) + 3]) / u[ix(i, j, k)];
-					flux[ix(i, j, k) + 1] = u[ix(i, j, k) + 1] * u31;
-					flux[ix(i, j, k) + 2] = u[ix(i, j, k) + 2] * u31 + c2 * (u[ix(i, j, k) + 4] - q);
-					flux[ix(i, j, k) + 3] = u[ix(i, j, k) + 3] * u31;
-					flux[ix(i, j, k) + 4] = (c1 * u[ix(i, j, k) + 4] - c2 * q) * u31;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2];
+					u31 = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					q = 0.50e+00 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2]
+							+ u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3]) / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] * u31;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] * u31 + c2 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - q);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] * u31;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = (c1 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - c2 * q) * u31;
 				}
 			}
+	}
+
+	private void rhsY_1(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
 					for (m = 1; m <= 5; m++){
-						rsd[ix(i, j, k) + (m - 1)] = rsd[ix(i, j, k) + (m - 1)] - ty2 * (flux[ix(i, j + 1, k) + (m - 1)]
-								- flux[ix(i, j - 1, k) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - ty2 * (flux[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + (m - 1)]
+								- flux[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + (m - 1)]);
 					}
 				}
 			}
+	}
+
+	private void rhsY_2(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			for (j = jst; j <= l2; j++){
 				for (i = ist; i <= iend; i++){
-					tmp = 1.0e+00 / u[ix(i, j, k)];
-					u21j = tmp * u[ix(i, j, k) + 1];
-					u31j = tmp * u[ix(i, j, k) + 2];
-					u41j = tmp * u[ix(i, j, k) + 3];
-					u51j = tmp * u[ix(i, j, k) + 4];
-					tmp = 1.0e+00 / u[ix(i, j - 1, k)];
-					u21jm1 = tmp * u[ix(i, j - 1, k) + 1];
-					u31jm1 = tmp * u[ix(i, j - 1, k) + 2];
-					u41jm1 = tmp * u[ix(i, j - 1, k) + 3];
-					u51jm1 = tmp * u[ix(i, j - 1, k) + 4];
-					flux[ix(i, j, k) + 1] = ty3 * (u21j - u21jm1);
-					flux[ix(i, j, k) + 2] = (4.0e+00 / 3.0e+00) * ty3 * (u31j - u31jm1);
-					flux[ix(i, j, k) + 3] = ty3 * (u41j - u41jm1);
-					flux[ix(i, j, k) + 4] = 0.50e+00 * (1.0e+00 - c1 * c5) * ty3 * ((sq(u21j) + sq(u31j) + sq(u41j)) - (sq(u21jm1)
+					tmp = 1.0e+00 / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					u21j = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1];
+					u31j = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2];
+					u41j = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3];
+					u51j = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4];
+					tmp = 1.0e+00 / u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1))))];
+					u21jm1 = tmp * u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 1];
+					u31jm1 = tmp * u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 2];
+					u41jm1 = tmp * u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 3];
+					u51jm1 = tmp * u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 4];
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = ty3 * (u21j - u21jm1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = (4.0e+00 / 3.0e+00) * ty3 * (u31j - u31jm1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = ty3 * (u41j - u41jm1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = 0.50e+00 * (1.0e+00 - c1 * c5) * ty3 * ((sq(u21j) + sq(u31j) + sq(u41j)) - (sq(u21jm1)
 							+ sq(u31jm1) + sq(u41jm1))) + (1.0e+00 / 6.0e+00) * ty3 * (sq(u31j) - sq(u31jm1)) + c1 * c5 * ty3 * (u51j - u51jm1);
 				}
 			}
+	}
+
+	private void rhsY_3(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
-					rsd[ix(i, j, k)] = rsd[ix(i, j, k)] + dy1 * ty1 * (u[ix(i, j - 1, k)] - 2.0e+00 * u[ix(i, j, k)]
-							+ u[ix(i, j + 1, k)]);
-					rsd[ix(i, j, k) + 1] = rsd[ix(i, j, k) + 1] + ty3 * c3 * c4 * (flux[ix(i, j + 1, k) + 1] - flux[ix(i, j, k) + 1])
-							+ dy2 * ty1 * (u[ix(i, j - 1, k) + 1] - 2.0e+00 * u[ix(i, j, k) + 1] + u[ix(i, j + 1, k) + 1]);
-					rsd[ix(i, j, k) + 2] = rsd[ix(i, j, k) + 2] + ty3 * c3 * c4 * (flux[ix(i, j + 1, k) + 2] - flux[ix(i, j, k) + 2])
-							+ dy3 * ty1 * (u[ix(i, j - 1, k) + 2] - 2.0e+00 * u[ix(i, j, k) + 2] + u[ix(i, j + 1, k) + 2]);
-					rsd[ix(i, j, k) + 3] = rsd[ix(i, j, k) + 3] + ty3 * c3 * c4 * (flux[ix(i, j + 1, k) + 3] - flux[ix(i, j, k) + 3])
-							+ dy4 * ty1 * (u[ix(i, j - 1, k) + 3] - 2.0e+00 * u[ix(i, j, k) + 3] + u[ix(i, j + 1, k) + 3]);
-					rsd[ix(i, j, k) + 4] = rsd[ix(i, j, k) + 4] + ty3 * c3 * c4 * (flux[ix(i, j + 1, k) + 4] - flux[ix(i, j, k) + 4])
-							+ dy5 * ty1 * (u[ix(i, j - 1, k) + 4] - 2.0e+00 * u[ix(i, j, k) + 4] + u[ix(i, j + 1, k) + 4]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] + dy1 * ty1 * (u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1))))] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))]
+							+ u[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1))))]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + ty3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 1] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1])
+							+ dy2 * ty1 * (u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 1] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + u[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 1]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] + ty3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 2] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2])
+							+ dy3 * ty1 * (u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 2] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] + u[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 2]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] + ty3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 3] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3])
+							+ dy4 * ty1 * (u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 3] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] + u[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 3]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] + ty3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 4] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4])
+							+ dy5 * ty1 * (u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + 4] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] + u[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + 4]);
 				}
 			}
+	}
+
+	private void rhsY_4(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			if (west == -1){
 				for (i = ist; i <= iend; i++){
 					for (m = 1; m <= 5; m++){
-						rsd[ix(i, 2, k) + (m - 1)] = rsd[ix(i, 2, k) + (m - 1)] - dssp * (5.0e+00 * u[ix(i, 2, k) + (m - 1)]
-								- 4.0e+00 * u[ix(i, 3, k) + (m - 1)] + u[ix(i, 4, k) + (m - 1)]);
-						rsd[ix(i, 3, k) + (m - 1)] = rsd[ix(i, 3, k) + (m - 1)] - dssp * (-(4.0e+00 * u[ix(i, 2, k) + (m - 1)])
-								+ 6.0e+00 * u[ix(i, 3, k) + (m - 1)] - 4.0e+00 * u[ix(i, 4, k) + (m - 1)] + u[ix(i, 5, k) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((2)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((2)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (5.0e+00 * u[(5*(((i)+1) + ldx*(((2)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i)+1) + ldx*(((3)+1) + ldy*((k)-1)))) + (m - 1)] + u[(5*(((i)+1) + ldx*(((4)+1) + ldy*((k)-1)))) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((3)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((3)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (-(4.0e+00 * u[(5*(((i)+1) + ldx*(((2)+1) + ldy*((k)-1)))) + (m - 1)])
+								+ 6.0e+00 * u[(5*(((i)+1) + ldx*(((3)+1) + ldy*((k)-1)))) + (m - 1)] - 4.0e+00 * u[(5*(((i)+1) + ldx*(((4)+1) + ldy*((k)-1)))) + (m - 1)] + u[(5*(((i)+1) + ldx*(((5)+1) + ldy*((k)-1)))) + (m - 1)]);
 					}
 				}
 			}
+	}
+
+	private void rhsY_5(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			for (j = jst1; j <= jend1; j++){
 				for (i = ist; i <= iend; i++){
 					for (m = 1; m <= 5; m++){
-						rsd[ix(i, j, k) + (m - 1)] = rsd[ix(i, j, k) + (m - 1)] - dssp * (u[ix(i, j - 2, k) + (m - 1)]
-								- 4.0e+00 * u[ix(i, j - 1, k) + (m - 1)] + 6.0e+00 * u[ix(i, j, k) + (m - 1)] - 4.0e+00 * u[ix(i, j + 1, k) + (m - 1)]
-								+ u[ix(i, j + 2, k) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((i)+1) + ldx*(((j - 2)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i)+1) + ldx*(((j - 1)+1) + ldy*((k)-1)))) + (m - 1)] + 6.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - 4.0e+00 * u[(5*(((i)+1) + ldx*(((j + 1)+1) + ldy*((k)-1)))) + (m - 1)]
+								+ u[(5*(((i)+1) + ldx*(((j + 2)+1) + ldy*((k)-1)))) + (m - 1)]);
 					}
 				}
 			}
+	}
+
+	private void rhsY_6(int k, int l1, int l2, int ist1, int iend1, int jst1, int jend1){
+		int i, j, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 			if (east == -1){
 				for (i = ist; i <= iend; i++){
 					for (m = 1; m <= 5; m++){
-						rsd[ix(i, ny - 2, k) + (m - 1)] = rsd[ix(i, ny - 2, k) + (m - 1)] - dssp * (u[ix(i, ny - 4, k) + (m - 1)]
-								- 4.0e+00 * u[ix(i, ny - 3, k) + (m - 1)] + 6.0e+00 * u[ix(i, ny - 2, k) + (m - 1)]
-								- 4.0e+00 * u[ix(i, ny - 1, k) + (m - 1)]);
-						rsd[ix(i, ny - 1, k) + (m - 1)] = rsd[ix(i, ny - 1, k) + (m - 1)] - dssp * (u[ix(i, ny - 3, k) + (m - 1)]
-								- 4.0e+00 * u[ix(i, ny - 2, k) + (m - 1)] + 5.0e+00 * u[ix(i, ny - 1, k) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((ny - 2)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((ny - 2)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((i)+1) + ldx*(((ny - 4)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i)+1) + ldx*(((ny - 3)+1) + ldy*((k)-1)))) + (m - 1)] + 6.0e+00 * u[(5*(((i)+1) + ldx*(((ny - 2)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i)+1) + ldx*(((ny - 1)+1) + ldy*((k)-1)))) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((ny - 1)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((ny - 1)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((i)+1) + ldx*(((ny - 3)+1) + ldy*((k)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i)+1) + ldx*(((ny - 2)+1) + ldy*((k)-1)))) + (m - 1)] + 5.0e+00 * u[(5*(((i)+1) + ldx*(((ny - 1)+1) + ldy*((k)-1)))) + (m - 1)]);
 					}
 				}
 			}
-		}
 	}
 
 	/*
 	 * steady-state residuals: z direction
 	 */
 	private void rhsZ(){
+		rhsZ_0();
+		rhsZ_1();
+		rhsZ_2();
+		rhsZ_3();
+		rhsZ_4();
+		rhsZ_5();
+		rhsZ_6();
+	}
 
-		int i, j, k, m, iex, l1, l2, ist1;
-		int iend1, jst1, jend1;
+	private void rhsZ_0(){
+		int i, j, k, m;
 		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
 		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
 		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
 		double u51jm1, u21km1, u31km1, u41km1, u51km1;
-
 		for (k = 1; k <= nz; k++){
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
-					flux[ix(i, j, k)] = u[ix(i, j, k) + 3];
-					u41 = u[ix(i, j, k) + 3] / u[ix(i, j, k)];
-					q = 0.50e+00 * (u[ix(i, j, k) + 1] * u[ix(i, j, k) + 1] + u[ix(i, j, k) + 2] * u[ix(i, j, k) + 2]
-							+ u[ix(i, j, k) + 3] * u[ix(i, j, k) + 3]) / u[ix(i, j, k)];
-					flux[ix(i, j, k) + 1] = u[ix(i, j, k) + 1] * u41;
-					flux[ix(i, j, k) + 2] = u[ix(i, j, k) + 2] * u41;
-					flux[ix(i, j, k) + 3] = u[ix(i, j, k) + 3] * u41 + c2 * (u[ix(i, j, k) + 4] - q);
-					flux[ix(i, j, k) + 4] = (c1 * u[ix(i, j, k) + 4] - c2 * q) * u41;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3];
+					u41 = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					q = 0.50e+00 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2]
+							+ u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3]) / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] * u41;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] * u41;
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] * u41 + c2 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - q);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = (c1 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] - c2 * q) * u41;
 				}
 			}
 		}
+	}
+
+	private void rhsZ_1(){
+		int i, j, k, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 		for (k = 2; k <= nz - 1; k++){
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
 					for (m = 1; m <= 5; m++){
-						rsd[ix(i, j, k) + (m - 1)] = rsd[ix(i, j, k) + (m - 1)] - tz2 * (flux[ix(i, j, k + 1) + (m - 1)]
-								- flux[ix(i, j, k - 1) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - tz2 * (flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + (m - 1)]
+								- flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + (m - 1)]);
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsZ_2(){
+		int i, j, k, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 		for (k = 2; k <= nz; k++){
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
-					tmp = 1.0e+00 / u[ix(i, j, k)];
-					u21k = tmp * u[ix(i, j, k) + 1];
-					u31k = tmp * u[ix(i, j, k) + 2];
-					u41k = tmp * u[ix(i, j, k) + 3];
-					u51k = tmp * u[ix(i, j, k) + 4];
-					tmp = 1.0e+00 / u[ix(i, j, k - 1)];
-					u21km1 = tmp * u[ix(i, j, k - 1) + 1];
-					u31km1 = tmp * u[ix(i, j, k - 1) + 2];
-					u41km1 = tmp * u[ix(i, j, k - 1) + 3];
-					u51km1 = tmp * u[ix(i, j, k - 1) + 4];
-					flux[ix(i, j, k) + 1] = tz3 * (u21k - u21km1);
-					flux[ix(i, j, k) + 2] = tz3 * (u31k - u31km1);
-					flux[ix(i, j, k) + 3] = (4.0e+00 / 3.0e+00) * tz3 * (u41k - u41km1);
-					flux[ix(i, j, k) + 4] = 0.50e+00 * (1.0e+00 - c1 * c5) * tz3 * ((sq(u21k) + sq(u31k) + sq(u41k)) - (sq(u21km1)
+					tmp = 1.0e+00 / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))];
+					u21k = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1];
+					u31k = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2];
+					u41k = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3];
+					u51k = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4];
+					tmp = 1.0e+00 / u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1))))];
+					u21km1 = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 1];
+					u31km1 = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 2];
+					u41km1 = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 3];
+					u51km1 = tmp * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 4];
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = tz3 * (u21k - u21km1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = tz3 * (u31k - u31km1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = (4.0e+00 / 3.0e+00) * tz3 * (u41k - u41km1);
+					flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = 0.50e+00 * (1.0e+00 - c1 * c5) * tz3 * ((sq(u21k) + sq(u31k) + sq(u41k)) - (sq(u21km1)
 							+ sq(u31km1) + sq(u41km1))) + (1.0e+00 / 6.0e+00) * tz3 * (sq(u41k) - sq(u41km1)) + c1 * c5 * tz3 * (u51k - u51km1);
 				}
 			}
 		}
+	}
+
+	private void rhsZ_3(){
+		int i, j, k, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 		for (k = 2; k <= nz - 1; k++){
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
-					rsd[ix(i, j, k)] = rsd[ix(i, j, k)] + dz1 * tz1 * (u[ix(i, j, k - 1)] - 2.0e+00 * u[ix(i, j, k)]
-							+ u[ix(i, j, k + 1)]);
-					rsd[ix(i, j, k) + 1] = rsd[ix(i, j, k) + 1] + tz3 * c3 * c4 * (flux[ix(i, j, k + 1) + 1] - flux[ix(i, j, k) + 1])
-							+ dz2 * tz1 * (u[ix(i, j, k - 1) + 1] - 2.0e+00 * u[ix(i, j, k) + 1] + u[ix(i, j, k + 1) + 1]);
-					rsd[ix(i, j, k) + 2] = rsd[ix(i, j, k) + 2] + tz3 * c3 * c4 * (flux[ix(i, j, k + 1) + 2] - flux[ix(i, j, k) + 2])
-							+ dz3 * tz1 * (u[ix(i, j, k - 1) + 2] - 2.0e+00 * u[ix(i, j, k) + 2] + u[ix(i, j, k + 1) + 2]);
-					rsd[ix(i, j, k) + 3] = rsd[ix(i, j, k) + 3] + tz3 * c3 * c4 * (flux[ix(i, j, k + 1) + 3] - flux[ix(i, j, k) + 3])
-							+ dz4 * tz1 * (u[ix(i, j, k - 1) + 3] - 2.0e+00 * u[ix(i, j, k) + 3] + u[ix(i, j, k + 1) + 3]);
-					rsd[ix(i, j, k) + 4] = rsd[ix(i, j, k) + 4] + tz3 * c3 * c4 * (flux[ix(i, j, k + 1) + 4] - flux[ix(i, j, k) + 4])
-							+ dz5 * tz1 * (u[ix(i, j, k - 1) + 4] - 2.0e+00 * u[ix(i, j, k) + 4] + u[ix(i, j, k + 1) + 4]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))] + dz1 * tz1 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1))))] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))]
+							+ u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1))))]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + tz3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 1] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1])
+							+ dz2 * tz1 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 1] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 1] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 1]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] + tz3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 2] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2])
+							+ dz3 * tz1 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 2] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 2] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 2]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] + tz3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 3] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3])
+							+ dz4 * tz1 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 3] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 3] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 3]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] + tz3 * c3 * c4 * (flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 4] - flux[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4])
+							+ dz5 * tz1 * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + 4] - 2.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + 4] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + 4]);
 				}
 			}
 		}
+	}
+
+	private void rhsZ_4(){
+		int i, j, k, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 		for (j = jst; j <= jend; j++){
 			for (i = ist; i <= iend; i++){
 				for (m = 1; m <= 5; m++){
-					rsd[ix(i, j, 2) + (m - 1)] = rsd[ix(i, j, 2) + (m - 1)] - dssp * (5.0e+00 * u[ix(i, j, 2) + (m - 1)]
-							- 4.0e+00 * u[ix(i, j, 3) + (m - 1)] + u[ix(i, j, 4) + (m - 1)]);
-					rsd[ix(i, j, 3) + (m - 1)] = rsd[ix(i, j, 3) + (m - 1)] - dssp * (-(4.0e+00 * u[ix(i, j, 2) + (m - 1)])
-							+ 6.0e+00 * u[ix(i, j, 3) + (m - 1)] - 4.0e+00 * u[ix(i, j, 4) + (m - 1)] + u[ix(i, j, 5) + (m - 1)]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((2)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((2)-1)))) + (m - 1)] - dssp * (5.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((2)-1)))) + (m - 1)]
+							- 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((3)-1)))) + (m - 1)] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((4)-1)))) + (m - 1)]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((3)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((3)-1)))) + (m - 1)] - dssp * (-(4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((2)-1)))) + (m - 1)])
+							+ 6.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((3)-1)))) + (m - 1)] - 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((4)-1)))) + (m - 1)] + u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((5)-1)))) + (m - 1)]);
 				}
 			}
 		}
+	}
+
+	private void rhsZ_5(){
+		int i, j, k, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 		for (k = 4; k <= nz - 3; k++){
 			for (j = jst; j <= jend; j++){
 				for (i = ist; i <= iend; i++){
 					for (m = 1; m <= 5; m++){
-						rsd[ix(i, j, k) + (m - 1)] = rsd[ix(i, j, k) + (m - 1)] - dssp * (u[ix(i, j, k - 2) + (m - 1)]
-								- 4.0e+00 * u[ix(i, j, k - 1) + (m - 1)] + 6.0e+00 * u[ix(i, j, k) + (m - 1)] - 4.0e+00 * u[ix(i, j, k + 1) + (m - 1)]
-								+ u[ix(i, j, k + 2) + (m - 1)]);
+						rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - dssp * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 2)-1)))) + (m - 1)]
+								- 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k - 1)-1)))) + (m - 1)] + 6.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1)))) + (m - 1)] - 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 1)-1)))) + (m - 1)]
+								+ u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k + 2)-1)))) + (m - 1)]);
 					}
 				}
 			}
 		}
+	}
+
+	private void rhsZ_6(){
+		int i, j, k, m;
+		double q, u21, u31, u41, tmp, u21i, u31i, u41i;
+		double u51i, u21j, u31j, u41j, u51j, u21k, u31k, u41k;
+		double u51k, u21im1, u31im1, u41im1, u51im1, u21jm1, u31jm1, u41jm1;
+		double u51jm1, u21km1, u31km1, u41km1, u51km1;
 		for (j = jst; j <= jend; j++){
 			for (i = ist; i <= iend; i++){
 				for (m = 1; m <= 5; m++){
-					rsd[ix(i, j, nz - 2) + (m - 1)] = rsd[ix(i, j, nz - 2) + (m - 1)] - dssp * (u[ix(i, j, nz - 4) + (m - 1)]
-							- 4.0e+00 * u[ix(i, j, nz - 3) + (m - 1)] + 6.0e+00 * u[ix(i, j, nz - 2) + (m - 1)]
-							- 4.0e+00 * u[ix(i, j, nz - 1) + (m - 1)]);
-					rsd[ix(i, j, nz - 1) + (m - 1)] = rsd[ix(i, j, nz - 1) + (m - 1)] - dssp * (u[ix(i, j, nz - 3) + (m - 1)]
-							- 4.0e+00 * u[ix(i, j, nz - 2) + (m - 1)] + 5.0e+00 * u[ix(i, j, nz - 1) + (m - 1)]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 2)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 2)-1)))) + (m - 1)] - dssp * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 4)-1)))) + (m - 1)]
+							- 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 3)-1)))) + (m - 1)] + 6.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 2)-1)))) + (m - 1)]
+							- 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 1)-1)))) + (m - 1)]);
+					rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 1)-1)))) + (m - 1)] = rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 1)-1)))) + (m - 1)] - dssp * (u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 3)-1)))) + (m - 1)]
+							- 4.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 2)-1)))) + (m - 1)] + 5.0e+00 * u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((nz - 1)-1)))) + (m - 1)]);
 				}
 			}
 		}
@@ -2275,7 +2461,7 @@ public class LU implements Benchmark{
 				for (j = jst; j <= jend; j++){
 					for (i = ist; i <= iend; i++){
 						for (m = 0; m < 5; m++){
-							rsd[ix(i,j,k)+m] = dt * rsd[ix(i,j,k)+m];
+							rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))+m] = dt * rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))+m];
 						}
 					}
 				}
@@ -2318,7 +2504,7 @@ public class LU implements Benchmark{
 				for (j = jst; j <= jend; j++){
 					for (i = ist; i <= iend; i++){
 						for (m = 0; m < 5; m++){
-							u[ix(i,j,k)+m] = u[ix(i,j,k)+m] + tmp * rsd[ix(i,j,k)+m];
+							u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))+m] = u[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))+m] + tmp * rsd[(5*(((i)+1) + ldx*(((j)+1) + ldy*((k)-1))))+m];
 						}
 					}
 				}
