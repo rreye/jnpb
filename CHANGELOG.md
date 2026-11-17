@@ -11,5 +11,8 @@ First release.
   so, see the README).
 * Results checked value by value against the official NPB 3.4.4, with golden fixtures and JUnit 5 tests.
 * Optimized compute code in all kernels, bit-identical with the reference results.
+* Performance evaluation against the official NPB 3.4.4 (GCC/gfortran `-O3`) for classes B, C and D, see
+  `docs/EVALUATION.md`. Every result is measured with one process, MPJ against MPI included, to show the
+  performance of Java itself without the influence of the communication library.
 * Command line compatible with the official NPB conventions where they apply: bare graph name for DT,
   `NPB_TIMER_FLAG` / `timer.flag` for detailed timing, `NPB_NPROCS_STRICT` for the number of processes.
