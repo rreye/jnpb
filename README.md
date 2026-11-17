@@ -149,12 +149,12 @@ methodology, and class B and class D results are in [docs/EVALUATION.md](docs/EV
 ## Origin and license
 
 The serial versions are translations of the NPB 3.4.4 OpenMP version. The MPJ versions are based on the
-NPB-MPJ implementation by Damián Álvarez Mallón (CG, EP, FT, IS, MG, SP, DT, and the common classes),
+NPB-MPJ implementation by Damián A. Mallón (CG, EP, FT, IS, MG, SP, DT, and the common classes),
 and on the NPB 3.4.4 MPI version (BT, LU). Every source file states which one it is based on. The algorithms,
 problem classes and verification values belong to the NAS Parallel Benchmarks; see the
 [NPB site](https://www.nas.nasa.gov/software/npb.html) for the original authors and credits.
 
-NPB-MPJ is described in Damián Álvarez Mallón, G. L. Taboada, J. Touriño and R. Doallo, "NPB-MPJ: NAS Parallel
+NPB-MPJ is described in Damián A. Mallón, Guillermo L. Taboada, Juan Touriño, and Ramón Doallo, "NPB-MPJ: NAS Parallel
 Benchmarks Implementation for Message-Passing in Java", 17th Euromicro International Conference on Parallel,
 Distributed and Network-based Processing (PDP), 2009
 ([IEEE Xplore](https://ieeexplore.ieee.org/document/4912932)).
